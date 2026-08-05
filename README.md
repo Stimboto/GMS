@@ -32,15 +32,6 @@ GMS (Grievance Management System) is an enterprise-grade platform designed to st
 - **AI/ML**: Ollama (Local LLM Integration)
 - **DevOps**: Docker, Docker Compose, Nginx
 
-## Screenshots
-
-<!-- Add screenshot images here -->
-*Dashboard View*
-
-*Grievance Timeline*
-
-*Admin Analytics*
-
 ## Getting Started
 
 ### Prerequisites
