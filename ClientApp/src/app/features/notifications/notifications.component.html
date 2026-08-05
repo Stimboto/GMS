@@ -1,0 +1,49 @@
+<div class="notifications-wrapper">
+  <div class="header-actions">
+    <div>
+      <h1 class="mat-h1">Notifications</h1>
+      <p class="subtitle">Stay updated on your grievances and tasks.</p>
+    </div>
+    <button mat-stroked-button (click)="loadNotifications()" [disabled]="loading">
+      <mat-icon>refresh</mat-icon> Refresh
+    </button>
+  </div>
+
+  <mat-card class="gms-card notifications-card">
+    <div *ngIf="loading" class="p-6 flex-col gap-3">
+      <app-skeleton type="card" height="60px"></app-skeleton>
+      <app-skeleton type="card" height="60px"></app-skeleton>
+      <app-skeleton type="card" height="60px"></app-skeleton>
+    </div>
+
+    <div *ngIf="!loading && notifications.length === 0" class="p-6">
+      <app-empty-state 
+        icon="notifications_off"
+        title="All caught up!"
+        description="You have no notifications at the moment.">
+      </app-empty-state>
+    </div>
+
+    <mat-list *ngIf="!loading && notifications.length > 0" class="notification-list p-0">
+      <ng-container *ngFor="let notification of notifications; let last = last">
+        <mat-list-item [class.unread]="!notification.isRead" class="notification-item py-2">
+          
+          <mat-icon matListItemIcon [color]="notification.isRead ? '' : 'primary'" class="notification-icon">
+            {{ getIconForNotification(notification.message) }}
+          </mat-icon>
+
+          <div matListItemTitle class="notification-message">{{ notification.message }}</div>
+          <div matListItemLine class="notification-time">{{ notification.createdAt | date:'medium' }}</div>
+
+          <button mat-icon-button matListItemMeta *ngIf="!notification.isRead" 
+                  (click)="markAsRead(notification.id)" 
+                  matTooltip="Mark as read"
+                  color="primary">
+            <mat-icon>check</mat-icon>
+          </button>
+        </mat-list-item>
+        <mat-divider *ngIf="!last"></mat-divider>
+      </ng-container>
+    </mat-list>
+  </mat-card>
+</div>

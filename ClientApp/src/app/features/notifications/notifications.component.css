@@ -1,0 +1,61 @@
+.notifications-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.notifications-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.notification-item {
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.notification-item.unread {
+  background-color: rgba(99, 102, 241, 0.04);
+}
+
+.notification-message {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.unread .notification-message {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.notification-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.notification-icon {
+  opacity: 0.7;
+}
+
+.unread .notification-icon {
+  opacity: 1;
+}
+
+.p-6 { padding: 1.5rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.p-0 { padding: 0 !important; }

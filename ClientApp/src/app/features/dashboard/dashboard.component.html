@@ -1,0 +1,96 @@
+<div class="dashboard-wrapper">
+  <div class="dashboard-header flex-row justify-between items-center">
+    <div>
+      <h1 class="mat-h1">Overview</h1>
+      <p class="subtitle" *ngIf="user">Welcome back, {{ user.fullName }} ({{ user.role }})</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="skeleton-container">
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
+  </div>
+
+  <div *ngIf="!loading && stats" class="dashboard-content">
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <mat-card class="kpi-card">
+        <mat-card-content class="flex-row items-center gap-2">
+          <div class="icon-bg primary-bg">
+            <mat-icon>list_alt</mat-icon>
+          </div>
+          <div>
+            <p class="kpi-label">Total Grievances</p>
+            <h2 class="kpi-value">{{ stats.totalGrievances }}</h2>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <mat-card-content class="flex-row items-center gap-2">
+          <div class="icon-bg warn-bg">
+            <mat-icon>pending_actions</mat-icon>
+          </div>
+          <div>
+            <p class="kpi-label">Pending</p>
+            <h2 class="kpi-value">{{ stats.pendingGrievances }}</h2>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <mat-card-content class="flex-row items-center gap-2">
+          <div class="icon-bg success-bg">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div>
+            <p class="kpi-label">Resolved</p>
+            <h2 class="kpi-value">{{ stats.resolvedGrievances }}</h2>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card" *ngIf="stats.totalUsers !== undefined">
+        <mat-card-content class="flex-row items-center gap-2">
+          <div class="icon-bg accent-bg">
+            <mat-icon>people</mat-icon>
+          </div>
+          <div>
+            <p class="kpi-label">Total Users</p>
+            <h2 class="kpi-value">{{ stats.totalUsers }}</h2>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-grid">
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Status Distribution</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-wrapper">
+            <canvas baseChart
+              [data]="pieChartData"
+              [options]="pieChartOptions"
+              [type]="pieChartType">
+            </canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Recent Activity</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="empty-state">
+            <mat-icon>timeline</mat-icon>
+            <p>Activity timeline will appear here soon.</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

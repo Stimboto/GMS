@@ -1,0 +1,55 @@
+<div class="auth-wrapper">
+  <!-- Split Screen Background Illustration -->
+  <div class="auth-illustration">
+    <div class="illustration-content">
+      <h1>GMS</h1>
+      <p>Premium Grievance Management System</p>
+      <div class="graphic-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Form Container -->
+  <div class="auth-form-container">
+    <div class="glass-panel auth-card">
+      <div class="auth-header">
+        <h2>Welcome Back</h2>
+        <p>Please enter your details to sign in.</p>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex-col gap-2">
+        
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Email Address</mat-label>
+          <input matInput type="email" formControlName="email" placeholder="name@example.com">
+          <mat-icon matPrefix>email</mat-icon>
+          <mat-error *ngIf="loginForm.get('email')?.hasError('required')">Email is required</mat-error>
+          <mat-error *ngIf="loginForm.get('email')?.hasError('email')">Please enter a valid email</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Password</mat-label>
+          <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password">
+          <mat-icon matPrefix>lock</mat-icon>
+          <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" type="button"
+                  [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hidePassword">
+            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+          <mat-error *ngIf="loginForm.get('password')?.hasError('required')">Password is required</mat-error>
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" type="submit" class="submit-btn" [disabled]="loginForm.invalid || loading">
+          <mat-spinner diameter="24" *ngIf="loading"></mat-spinner>
+          <span *ngIf="!loading">Sign In</span>
+        </button>
+
+      </form>
+
+      <div class="auth-footer">
+        <p>Don't have an account? <a routerLink="/register">Create one</a></p>
+      </div>
+    </div>
+  </div>
+</div>

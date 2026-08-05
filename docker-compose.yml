@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  gms-sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gms-sqlserver
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}", "-C", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - gms-network
+    # Note: No ports exposed to host. The database is only accessible inside the gms-network.
+
+  gms-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gms-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      gms-sqlserver:
+        condition: service_healthy
+    volumes:
+      - api-uploads:/app/uploads
+      - api-logs:/app/logs
+    networks:
+      - gms-network
+
+  gms-frontend:
+    build:
+      context: ./ClientApp
+      dockerfile: Dockerfile
+    container_name: gms-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - gms-api
+    networks:
+      - gms-network
+
+  gms-ollama:
+    image: ollama/ollama:latest
+    container_name: gms-ollama
+    restart: unless-stopped
+    profiles:
+      - ai
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - gms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    # Initialization container to automatically pull the model on startup if it doesn't exist
+    # Can be run manually via: docker compose run --rm ollama-init
+
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: ollama-init
+    profiles:
+      - ai
+    depends_on:
+      gms-ollama:
+        condition: service_healthy
+    networks:
+      - gms-network
+    command: >
+      sh -c "echo 'Pulling Llama3.2:1b...' && curl -X POST http://gms-ollama:11434/api/pull -d '{\"name\":\"llama3.2:1b\"}' && echo 'Done!'"
+
+volumes:
+  sql-data:
+  api-uploads:
+  api-logs:
+  ollama-data:
+
+networks:
+  gms-network:
+    driver: bridge

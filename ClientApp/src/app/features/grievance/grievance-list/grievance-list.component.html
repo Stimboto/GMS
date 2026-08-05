@@ -1,0 +1,111 @@
+<div class="list-wrapper">
+  <div class="header-actions flex-row justify-between items-center">
+    <div>
+      <h1 class="mat-h1">Grievances</h1>
+      <p class="subtitle">Manage and track issues in the system.</p>
+    </div>
+    <button mat-flat-button color="primary" routerLink="/citizen/grievances/create" *ngIf="user?.role === 'Citizen'">
+      <mat-icon>add</mat-icon> Create New
+    </button>
+  </div>
+
+  <div class="gms-card table-card">
+    <div class="table-header">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search Grievances</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Ex. Road repair" #input>
+      </mat-form-field>
+    </div>
+
+    <div class="table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="w-100">
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="trackingId">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Tracking ID </th>
+          <td mat-cell *matCellDef="let row"> <span class="font-semibold text-gray-700">{{row.trackingId}}</span> </td>
+        </ng-container>
+
+        <!-- Title Column -->
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Title </th>
+          <td mat-cell *matCellDef="let row" class="title-cell"> {{row.title}} </td>
+        </ng-container>
+
+        <!-- Category Column -->
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Category </th>
+          <td mat-cell *matCellDef="let row">
+            <span class="category-chip" *ngIf="row.category">
+              <mat-icon inline>auto_awesome</mat-icon> {{row.category}}
+            </span>
+            <span *ngIf="!row.category">-</span>
+          </td>
+        </ng-container>
+
+        <!-- Priority Column -->
+        <ng-container matColumnDef="priority">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Priority </th>
+          <td mat-cell *matCellDef="let row">
+            <span class="custom-chip" [ngClass]="getPriorityColor(row.priority)" *ngIf="row.priority">
+              {{row.priority}}
+            </span>
+            <span *ngIf="!row.priority">-</span>
+          </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Status </th>
+          <td mat-cell *matCellDef="let row">
+            <span class="custom-chip" [ngClass]="getStatusColor(row.status)">
+              {{row.status}}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef> Actions </th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-stroked-button color="primary" (click)="viewDetails(row.id)">
+              View Details
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+
+        <!-- Row shown when there is no matching data. -->
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell empty-cell" colspan="6">
+            <div *ngIf="!loading && dataSource.data.length === 0 && !input.value">
+              <app-empty-state 
+                icon="folder_open" 
+                title="No grievances found" 
+                description="There are no grievances to display.">
+              </app-empty-state>
+            </div>
+            <div *ngIf="!loading && dataSource.data.length > 0 && input.value">
+              <app-empty-state 
+                icon="search_off" 
+                title="No results found" 
+                [description]="'No grievances match your search for \'' + input.value + '\''">
+              </app-empty-state>
+            </div>
+            <div *ngIf="loading" style="padding: 2rem;">
+              <app-skeleton type="card" height="40px"></app-skeleton>
+              <br>
+              <app-skeleton type="card" height="40px"></app-skeleton>
+              <br>
+              <app-skeleton type="card" height="40px"></app-skeleton>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]" aria-label="Select page of grievances"></mat-paginator>
+  </div>
+</div>

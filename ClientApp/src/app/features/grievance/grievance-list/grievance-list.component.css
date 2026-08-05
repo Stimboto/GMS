@@ -1,0 +1,125 @@
+.list-wrapper {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header-actions {
+  margin-bottom: 24px;
+}
+
+.header-actions h1 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-default);
+}
+
+.search-field {
+  width: 100%;
+  max-width: 400px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.title-cell {
+  font-weight: 500;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table-row {
+  transition: background-color var(--transition-fast);
+}
+
+.table-row:hover {
+  background-color: var(--hover-color);
+}
+
+.custom-chip {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pending { background-color: var(--status-pending-bg); color: var(--status-pending-text); }
+.status-review { background-color: var(--status-review-bg); color: var(--status-review-text); }
+.status-resolved { background-color: var(--status-resolved-bg); color: var(--status-resolved-text); }
+
+.priority-high { background-color: var(--priority-high-bg); color: var(--priority-high-text); }
+.priority-medium { background-color: var(--priority-medium-bg); color: var(--priority-medium-text); }
+.priority-low { background-color: var(--priority-low-bg); color: var(--priority-low-text); }
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(to right, rgba(118, 75, 162, 0.1), rgba(102, 126, 234, 0.1));
+  color: #764ba2;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(118, 75, 162, 0.2);
+}
+
+.category-chip mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+[data-theme="dark"] .category-chip {
+  color: #b39ddb;
+}
+
+.empty-cell {
+  padding: 48px;
+  text-align: center;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-disabled);
+}
+
+.empty-state mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none; /* Hide standard error space for search bar */
+}

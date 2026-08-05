@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="GMS.API/GMS.API.csproj" />
+  <Project Path="GMS.Application/GMS.Application.csproj" />
+  <Project Path="GMS.Domain/GMS.Domain.csproj" />
+  <Project Path="GMS.Infrastructure/GMS.Infrastructure.csproj" />
+</Solution>

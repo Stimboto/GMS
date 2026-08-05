@@ -1,0 +1,84 @@
+<div class="dashboard-header">
+  <div>
+    <h2>Citizen Dashboard</h2>
+    <p>Welcome back! Here is an overview of your grievances.</p>
+  </div>
+  <button mat-flat-button color="primary" routerLink="/citizen/grievances/create">
+    <mat-icon>add</mat-icon>
+    Create Grievance
+  </button>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+  <app-stat-card 
+    title="Total Submitted" 
+    [value]="stats?.totalGrievances || 0" 
+    icon="description"
+    colorClass="blue"
+    description="All time grievances"
+    [loading]="loadingStats">
+  </app-stat-card>
+
+  <app-stat-card 
+    title="In Progress" 
+    [value]="stats?.pendingGrievances || 0" 
+    icon="pending_actions"
+    colorClass="orange"
+    description="Currently active"
+    [loading]="loadingStats">
+  </app-stat-card>
+
+  <app-stat-card 
+    title="Resolved" 
+    [value]="stats?.resolvedGrievances || 0" 
+    icon="check_circle"
+    colorClass="green"
+    description="Successfully closed"
+    [loading]="loadingStats">
+  </app-stat-card>
+</div>
+
+<!-- Recent Activity Section -->
+<div class="recent-section">
+  <div class="section-header">
+    <h3>Recent Grievances</h3>
+    <a routerLink="/citizen/grievances" class="view-all">View All</a>
+  </div>
+
+  <ng-container *ngIf="loadingRecent">
+    <div class="grid-layout">
+      <app-skeleton type="card" height="150px"></app-skeleton>
+      <app-skeleton type="card" height="150px"></app-skeleton>
+      <app-skeleton type="card" height="150px"></app-skeleton>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="!loadingRecent && recentGrievances.length > 0">
+    <div class="grid-layout">
+      <div class="grievance-card" *ngFor="let g of recentGrievances" [routerLink]="['/citizen/grievances', g.id]">
+        <div class="card-header">
+          <span class="status-badge" [ngClass]="g.status.replace(' ', '-').toLowerCase()">{{ g.status }}</span>
+          <span class="date">{{ g.createdAt | date:'shortDate' }}</span>
+        </div>
+        <h4 class="title">{{ g.title }}</h4>
+        <p class="desc">{{ g.description }}</p>
+        <div class="card-footer">
+          <span class="dept"><mat-icon>domain</mat-icon> {{ g.departmentName || 'Unassigned' }}</span>
+          <span class="priority" [ngClass]="g.priority.toLowerCase()">{{ g.priority }}</span>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="!loadingRecent && recentGrievances.length === 0">
+    <app-empty-state 
+      icon="post_add"
+      title="No grievances yet"
+      description="You haven't submitted any grievances. Click below to create your first one."
+      actionLabel="Create Grievance"
+      (onAction)="this.recentGrievances.length = 0">
+    </app-empty-state>
+    <!-- We can't navigate easily from empty state event without router injection in HTML, so we rely on the header button or add router inside TS if needed. -->
+  </ng-container>
+</div>

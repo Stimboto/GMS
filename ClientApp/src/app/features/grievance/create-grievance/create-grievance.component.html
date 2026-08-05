@@ -1,0 +1,86 @@
+<div class="create-container">
+  <div class="header">
+    <button mat-icon-button routerLink="/citizen/grievances" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-text">
+      <h1 class="mat-h1">Submit Grievance</h1>
+      <p class="subtitle">Please provide details about the issue.</p>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="form-section gms-card">
+      <form [formGroup]="grievanceForm" (ngSubmit)="onSubmit()" class="form-content">
+        
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input matInput formControlName="title" placeholder="Ex. Pothole on Main Street">
+            <mat-error *ngIf="grievanceForm.get('title')?.hasError('required')">Title is required</mat-error>
+            <mat-error *ngIf="grievanceForm.get('title')?.hasError('maxlength')">Max length is 100 characters</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Department</mat-label>
+            <mat-select formControlName="departmentId">
+              <mat-option *ngFor="let dept of departments" [value]="dept.id">
+                {{ dept.name }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="grievanceForm.get('departmentId')?.hasError('required')">Please select a department</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea matInput formControlName="description" rows="6" 
+              placeholder="Describe the issue in detail. Our AI will automatically categorize it."></textarea>
+            <mat-error *ngIf="grievanceForm.get('description')?.hasError('required')">Description is required</mat-error>
+            <mat-error *ngIf="grievanceForm.get('description')?.hasError('minlength')">Must be at least 10 characters</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <label class="section-label">Attachments (Optional)</label>
+          <app-file-upload (filesChanged)="onFilesChanged($event)"></app-file-upload>
+        </div>
+
+        <div class="actions">
+          <button mat-button type="button" routerLink="/citizen/grievances">Cancel</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="grievanceForm.invalid || loading">
+            <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
+            <span *ngIf="!loading">Submit Grievance</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Live Preview / AI Panel -->
+    <div class="info-section">
+      <div class="gms-card sticky-card">
+        <h3>AI Assistant Preview</h3>
+        <p class="helper-text">As you type, our AI analyzes your grievance to determine priority and categorization automatically.</p>
+        
+        <div *ngIf="analyzing" class="analyzing-state">
+          <mat-spinner diameter="30"></mat-spinner>
+          <span>Analyzing description...</span>
+        </div>
+
+        <app-ai-card 
+          *ngIf="!analyzing && (aiCategory || aiPriority)"
+          [category]="aiCategory"
+          [priority]="aiPriority">
+        </app-ai-card>
+
+        <div class="placeholder-state" *ngIf="!analyzing && !aiCategory && !aiPriority">
+          <mat-icon>auto_awesome</mat-icon>
+          <p>Start typing a description to see AI insights.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

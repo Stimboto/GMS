@@ -1,0 +1,39 @@
+# Node
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+# .NET / C#
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.dll
+*.exe
+*.pdb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Angular
+.angular/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.env
+sqlserver-data/
+logs/
+
+# Uploads
+uploads/
+ClientApp/src/assets/uploads/

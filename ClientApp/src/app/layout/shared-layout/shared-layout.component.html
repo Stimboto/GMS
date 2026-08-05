@@ -1,0 +1,76 @@
+<div class="app-layout" [class.dark-theme]="themeService.currentTheme() === 'dark'">
+  
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.collapsed]="isSidebarCollapsed">
+    <div class="brand">
+      <mat-icon>gavel</mat-icon>
+      <span class="brand-text" *ngIf="!isSidebarCollapsed">GMS Portal</span>
+    </div>
+    <div class="nav-links">
+      <a *ngFor="let item of filteredNavItems" [routerLink]="item.path" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span *ngIf="!isSidebarCollapsed">{{ item.label }}</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content flex-1 flex flex-col min-w-0">
+    <!-- Top App Bar -->
+    <header class="top-toolbar">
+      <button mat-icon-button (click)="toggleSidebar()" class="menu-btn">
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <!-- Global Search Placeholder (Could be expanded later) -->
+      <div class="search-bar-container">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search..." class="search-input">
+      </div>
+
+      <span class="spacer"></span>
+
+      <!-- Theme Toggle -->
+      <button mat-icon-button (click)="toggleTheme()" matTooltip="Toggle theme">
+        <mat-icon>{{ themeService.currentTheme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+
+      <!-- Notifications -->
+      <button mat-icon-button routerLink="/notifications">
+        <mat-icon [matBadge]="unreadNotifications" matBadgeColor="warn" [matBadgeHidden]="unreadNotifications === 0">
+          notifications
+        </mat-icon>
+      </button>
+
+      <!-- User Profile -->
+      <button mat-icon-button [matMenuTriggerFor]="userMenu" class="profile-btn ml-2">
+        <div class="profile-avatar" *ngIf="!user?.profileImageUrl">{{ user?.fullName?.charAt(0) || 'U' }}</div>
+        <img class="profile-avatar-img" *ngIf="user?.profileImageUrl" [src]="getImageUrl(user?.profileImageUrl)" alt="Profile">
+      </button>
+      <mat-menu #userMenu="matMenu" class="user-menu">
+        <div class="user-info-menu" *ngIf="user">
+          <div class="menu-avatar" *ngIf="!user?.profileImageUrl">{{ user.fullName.charAt(0) }}</div>
+          <img class="menu-avatar-img" *ngIf="user?.profileImageUrl" [src]="getImageUrl(user?.profileImageUrl)" alt="Profile">
+          <div class="menu-details">
+            <p class="name">{{ user.fullName }}</p>
+            <p class="role-badge" [ngClass]="user.role.toLowerCase()">{{ user.role }}</p>
+          </div>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item routerLink="/profile">
+          <mat-icon>person</mat-icon>
+          <span>Profile</span>
+        </button>
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>exit_to_app</mat-icon>
+          <span>Logout</span>
+        </button>
+      </mat-menu>
+    </header>
+
+    <!-- Router Outlet Wrapper -->
+    <div class="content-wrapper flex-1 overflow-auto">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>
