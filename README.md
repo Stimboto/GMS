@@ -1,4 +1,5 @@
 <div align="center">
+  <img width="1983" height="793" alt="ChatGPT Image Aug 8, 2026, 12_45_54 AM" src="https://github.com/user-attachments/assets/59caf91a-d4e1-4b1e-9cec-cfa453572486" />
 
 # 🏛️ GMS
 
