@@ -4,6 +4,7 @@ using GMS.Application.Interfaces;
 using GMS.Domain.Entities;
 using GMS.Domain.Enums;
 using GMS.Infrastructure.Data;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -14,12 +15,14 @@ public class OllamaService : IOllamaService
     private readonly HttpClient _httpClient;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OllamaService> _logger;
+    private readonly IConfiguration _configuration;
 
-    public OllamaService(HttpClient httpClient, IServiceScopeFactory scopeFactory, ILogger<OllamaService> logger)
+    public OllamaService(HttpClient httpClient, IServiceScopeFactory scopeFactory, ILogger<OllamaService> logger, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _configuration = configuration;
     }
 
     public async Task AnalyzeGrievanceAsync(int grievanceId, string description)
@@ -37,16 +40,19 @@ Description: {description}
 Return ONLY valid JSON.
 ";
 
+            var baseUrl = _configuration["AI:BaseUrl"] ?? "http://localhost:11434";
+            var modelName = _configuration["AI:Model"] ?? "llama3.1";
+
             var requestBody = new
             {
-                model = "llama3.1",
+                model = modelName,
                 prompt = prompt,
                 stream = false,
                 format = "json"
             };
 
             var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("http://localhost:11434/api/generate", content);
+            var response = await _httpClient.PostAsync($"{baseUrl}/api/generate", content);
 
             if (response.IsSuccessStatusCode)
             {

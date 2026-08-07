@@ -2,10 +2,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace GMS.Application.DTOs.Grievances;
 
-public class AssignOfficerRequest
+public class AddRemarkRequest
 {
-    public int OfficerId { get; set; }
     public string? Remarks { get; set; }
-    public bool IsInternal { get; set; } = true;
     public IFormFile? File { get; set; }
+    public bool IsInternal { get; set; }
 }

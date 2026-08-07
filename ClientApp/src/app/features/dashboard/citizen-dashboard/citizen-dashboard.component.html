@@ -64,7 +64,7 @@
         <h4 class="title">{{ g.title }}</h4>
         <p class="desc">{{ g.description }}</p>
         <div class="card-footer">
-          <span class="dept"><mat-icon>domain</mat-icon> {{ g.departmentName || 'Unassigned' }}</span>
+            <span class="text-sm text-gray-500 flex items-center gap-1"><mat-icon>domain</mat-icon> {{ g.department || 'Unassigned' }}</span>
           <span class="priority" [ngClass]="g.priority.toLowerCase()">{{ g.priority }}</span>
         </div>
       </div>

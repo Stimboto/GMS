@@ -15,9 +15,11 @@ public interface IGrievanceService
     // Officer
     Task<IEnumerable<GrievanceResponse>> GetAssignedGrievancesAsync(int officerId);
     Task UpdateStatusAsync(int id, UpdateStatusRequest request, int officerId);
+    Task AddRemarkAsync(int id, AddRemarkRequest request, int userId);
 
     // Admin
     Task<IEnumerable<GrievanceResponse>> GetAllAsync();
-    Task AssignOfficerAsync(int id, AssignOfficerRequest request);
+    Task AssignOfficerAsync(int id, AssignOfficerRequest request, int adminId);
     Task UpdateDepartmentAsync(int id, int departmentId);
+    Task ToggleHistoryInternalAsync(int historyId, bool isInternal, int userId);
 }

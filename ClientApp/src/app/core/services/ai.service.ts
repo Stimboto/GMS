@@ -8,8 +8,33 @@ export interface AiPredictionRequest {
   description: string;
 }
 
-export interface AiPredictionResponse {
-  prediction: string;
+export interface SimilarGrievance {
+  id: number;
+  trackingId: string;
+  title: string;
+  status: string;
+  department: string;
+  createdAt: string;
+}
+
+export interface GrievanceAnalysisResult {
+  priority: string;
+  summary: string;
+  similarGrievances: SimilarGrievance[];
+}
+
+export interface ChatMessage {
+  sender: 'user' | 'bot';
+  text: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  history: ChatMessage[];
+}
+
+export interface ChatResponse {
+  reply: string;
 }
 
 @Injectable({
@@ -19,15 +44,11 @@ export class AiService {
   private http = inject(HttpClient);
   private baseUrl = environment.apiUrl + '/ai';
 
-  predictCategory(data: AiPredictionRequest): Observable<AiPredictionResponse> {
-    return this.http.post<AiPredictionResponse>(`${this.baseUrl}/predict-category`, data);
+  analyzeGrievance(data: AiPredictionRequest): Observable<GrievanceAnalysisResult> {
+    return this.http.post<GrievanceAnalysisResult>(`${this.baseUrl}/analyze`, data);
   }
 
-  predictPriority(data: AiPredictionRequest): Observable<AiPredictionResponse> {
-    return this.http.post<AiPredictionResponse>(`${this.baseUrl}/predict-priority`, data);
-  }
-
-  generateSummary(data: AiPredictionRequest): Observable<AiPredictionResponse> {
-    return this.http.post<AiPredictionResponse>(`${this.baseUrl}/generate-summary`, data);
+  chat(data: ChatRequest): Observable<ChatResponse> {
+    return this.http.post<ChatResponse>(`${this.baseUrl}/chat`, data);
   }
 }

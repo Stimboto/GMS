@@ -12,6 +12,7 @@ import { GrievanceDetailComponent } from './features/grievance/grievance-detail/
 import { NotificationsComponent } from './features/notifications/notifications.component';
 import { ProfileComponent } from './features/profile/profile.component';
 import { SharedLayoutComponent } from './layout/shared-layout/shared-layout.component';
+import { GmsSmartChatComponent } from './shared/components/gms-smart-chat/gms-smart-chat.component';
 
 // Dashboards
 import { CitizenDashboardComponent } from './features/dashboard/citizen-dashboard/citizen-dashboard.component';
@@ -60,6 +61,12 @@ export const routes: Routes = [
       { 
         path: 'citizen/grievances/:id', 
         component: GrievanceDetailComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['Citizen'] }
+      },
+      { 
+        path: 'citizen/chat', 
+        component: GmsSmartChatComponent,
         canActivate: [roleGuard],
         data: { roles: ['Citizen'] }
       },

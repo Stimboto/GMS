@@ -1,152 +1,280 @@
+using System.Diagnostics;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using GMS.Application.DTOs.AI;
 using GMS.Application.Interfaces;
+using GMS.Domain.Entities;
+using GMS.Domain.Enums;
+using GMS.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace GMS.Infrastructure.Services;
 
 public class OllamaAIService : IAIService
 {
-    private readonly IChatClient _chatClient;
     private readonly ILogger<OllamaAIService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly bool _isEnabled;
     private readonly string _modelName;
     private readonly int _timeoutSeconds;
-    private readonly HttpClient _httpClient; // kept for health check
+    private readonly HttpClient _httpClient;
 
     public OllamaAIService(
         IConfiguration configuration,
         ILogger<OllamaAIService> logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
+        _scopeFactory = scopeFactory;
         
         var aiConfig = configuration.GetSection("AI");
         _isEnabled = aiConfig.GetValue<bool>("Enabled");
-        _modelName = aiConfig.GetValue<string>("Model") ?? "llama3.2";
+        _modelName = aiConfig.GetValue<string>("Model") ?? "llama3.2:1b";
         _timeoutSeconds = aiConfig.GetValue<int>("TimeoutSeconds", 30);
         var baseUrl = aiConfig.GetValue<string>("BaseUrl") ?? "http://localhost:11434";
 
         _httpClient = httpClientFactory.CreateClient("OllamaClient");
         _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromSeconds(_timeoutSeconds);
-
-        if (_isEnabled)
-        {
-            _chatClient = new OllamaChatClient(new Uri(baseUrl), _modelName, _httpClient);
-        }
-        else
-        {
-            _chatClient = null!; // Won't be used if disabled
-        }
     }
 
-    private async Task<string> GenerateResponseAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken)
+    private async Task<string> GenerateDirectResponseAsync(string prompt, CancellationToken cancellationToken)
     {
-        if (!_isEnabled)
+        if (!_isEnabled) throw new InvalidOperationException("AI is disabled.");
+
+        var payload = new
         {
-            _logger.LogInformation("AI is disabled. Skipping request.");
-            throw new InvalidOperationException("AI is disabled.");
+            model = _modelName,
+            prompt = prompt,
+            stream = false,
+            options = new { num_predict = 350, temperature = 0.1 }
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/generate", payload, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+        if (json.TryGetProperty("response", out var respProp))
+        {
+            return respProp.GetString()?.Trim() ?? string.Empty;
         }
 
-        var sw = Stopwatch.StartNew();
-        _logger.LogInformation("AI request started.");
+        return string.Empty;
+    }
 
-        try
+    private string CalculateTriagePriority(string title, string description)
+    {
+        var text = (title + " " + description).ToLowerInvariant();
+
+        // Critical Keywords (Life-threatening / Immediate Danger)
+        if (text.Contains("fire") || text.Contains("explosion") || text.Contains("electric shock") || 
+            text.Contains("live wire") || text.Contains("gas leak") || text.Contains("chemical") || 
+            text.Contains("poison") || text.Contains("collapse") || text.Contains("fatal") || 
+            text.Contains("death") || text.Contains("life threatening") || text.Contains("electrocution"))
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
-
-            var messages = new List<ChatMessage>
-            {
-                new ChatMessage(ChatRole.System, systemPrompt),
-                new ChatMessage(ChatRole.User, userPrompt)
-            };
-
-            // Limit generation to avoid long waits and unexpected formats
-            var options = new ChatOptions { MaxOutputTokens = 100, Temperature = 0.0f };
-            
-            var response = await _chatClient.GetResponseAsync(messages, options, cts.Token);
-            
-            sw.Stop();
-            _logger.LogInformation($"AI completed in {sw.ElapsedMilliseconds}ms.");
-            
-            var content = response.Text?.Trim() ?? string.Empty;
-            return content;
+            return "Critical";
         }
-        catch (Exception ex)
+
+        // High Keywords (Urgent Hazards / Major Outages / Accidents)
+        if (text.Contains("pothole") || text.Contains("accident") || text.Contains("traffic jam") || 
+            text.Contains("sewage") || text.Contains("flooding") || text.Contains("overflow") || 
+            text.Contains("hazard") || text.Contains("danger") || text.Contains("open manhole") || 
+            text.Contains("hospital") || text.Contains("water outage") || text.Contains("no water") || 
+            text.Contains("blackout") || text.Contains("severe") || text.Contains("urgent") || text.Contains("emergency"))
         {
-            sw.Stop();
-            _logger.LogError(ex, $"AI failed after {sw.ElapsedMilliseconds}ms.");
-            throw; // Let the caller handle the fallback
+            return "High";
         }
+
+        // Low Keywords (General Inquiries / Feedback / Requests)
+        if (text.Contains("inquiry") || text.Contains("question") || text.Contains("feedback") || 
+            text.Contains("suggestion") || text.Contains("app issue") || text.Contains("peaceful") || 
+            text.Contains("study") || text.Contains("general"))
+        {
+            return "Low";
+        }
+
+        return "Medium";
     }
 
     public async Task<string> CategorizeGrievanceAsync(string title, string description, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = @"You are a strict classification engine.
-Your task is to classify the following public grievance into EXACTLY ONE of the following categories:
-Roads, Water Supply, Electricity, Sanitation, Health, Transport, Education, Other.
-
-Rules:
-1. Output ONLY the category name.
-2. NO explanations.
-3. NO markdown, NO bullet points, NO extra text.
-4. If you cannot decide, output 'Other'.";
-
-        var userPrompt = $"Title: {title}\nDescription: {description}";
-
-        var result = await GenerateResponseAsync(systemPrompt, userPrompt, cancellationToken);
-        
-        var validCategories = new[] { "Roads", "Water Supply", "Electricity", "Sanitation", "Health", "Transport", "Education", "Other" };
-        if (!validCategories.Any(c => c.Equals(result, StringComparison.OrdinalIgnoreCase)))
+        var prompt = $"Classify this public grievance into exactly one category (Roads, Water Supply, Electricity, Sanitation, Health, Transport, Education, Other). Output ONLY the category name.\nTitle: {title}\nDescription: {description}";
+        try
+        {
+            return await GenerateDirectResponseAsync(prompt, cancellationToken);
+        }
+        catch
         {
             return "Other";
         }
-
-        return result;
     }
 
     public async Task<string> DetectPriorityAsync(string title, string description, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = @"You are a strict priority detection engine.
-Your task is to assign a priority to the following public grievance from exactly one of these values:
-Critical, High, Medium, Low.
+        return CalculateTriagePriority(title, description);
+    }
 
-Rules:
-1. Output ONLY the priority value.
-2. NO explanations.
-3. NO markdown, NO bullet points.
-4. If you cannot decide, output 'Medium'.";
-
-        var userPrompt = $"Title: {title}\nDescription: {description}";
-
-        var result = await GenerateResponseAsync(systemPrompt, userPrompt, cancellationToken);
-
-        var validPriorities = new[] { "Critical", "High", "Medium", "Low" };
-        if (!validPriorities.Any(c => c.Equals(result, StringComparison.OrdinalIgnoreCase)))
+    public async Task<string> GenerateSummaryAsync(string title, string description, CancellationToken cancellationToken = default)
+    {
+        var prompt = $"Summarize this public grievance in 1 to 2 clear sentences (max 40 words). Focus only on key facts.\nTitle: {title}\nDescription: {description}";
+        try
         {
-            return "Medium";
+            return await GenerateDirectResponseAsync(prompt, cancellationToken);
+        }
+        catch
+        {
+            return description.Length > 120 ? description.Substring(0, 120) : description;
+        }
+    }
+
+    public async Task<GrievanceAnalysisResultDto> AnalyzeAsync(string title, string description, CancellationToken cancellationToken = default)
+    {
+        var result = new GrievanceAnalysisResultDto();
+        result.Priority = CalculateTriagePriority(title, description);
+
+        // Fetch candidate active grievances (up to 30) for semantic comparison
+        var candidateGrievances = new List<Grievance>();
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            candidateGrievances = await db.Grievances
+                .Include(g => g.Department)
+                .Where(g => g.Status != GrievanceStatus.Closed && g.Status != GrievanceStatus.Resolved)
+                .OrderByDescending(g => g.CreatedAt)
+                .Take(30)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load candidate grievances for duplicate check.");
+        }
+
+        var candidateListText = string.Join("\n", candidateGrievances.Select(g => $"[ID:{g.Id}] Title: {g.Title} | Desc: {g.Description}"));
+
+        var prompt = $@"You are the core AI Engine for a Municipal Grievance Management System.
+Analyze the new citizen grievance below.
+
+NEW GRIEVANCE:
+Title: {title}
+Description: {description}
+
+EXISTING ACTIVE GRIEVANCES:
+{(candidateGrievances.Any() ? candidateListText : "None")}
+
+TASK:
+1. Provide a concise, professional 1 to 2 sentence summary (30-50 words) of the new grievance. Do NOT copy the description verbatim. Focus on the core problem and requested action.
+2. Identify IDs of existing grievances that are SEMANTICALLY SIMILAR (same problem location or issue) with >85% confidence. If none, return empty list [].
+
+Return ONLY a JSON object in this exact format (no markdown codeblocks, no intro):
+{{
+  ""summary"": ""..."",
+  ""similarGrievanceIds"": [12]
+}}";
+
+        try
+        {
+            var jsonText = await GenerateDirectResponseAsync(prompt, cancellationToken);
+            var cleanedJson = Regex.Replace(jsonText, @"^```(json)?|```$", "", RegexOptions.Multiline).Trim();
+
+            using var doc = JsonDocument.Parse(cleanedJson);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("summary", out var sumProp) && !string.IsNullOrWhiteSpace(sumProp.GetString()))
+            {
+                var s = sumProp.GetString()!.Trim();
+                s = Regex.Replace(s, @"(?i)^(summary|the summary is):?\s*", "").Trim();
+                if (s.Length > 10) result.Summary = s;
+            }
+
+            if (root.TryGetProperty("similarGrievanceIds", out var idsProp) && idsProp.ValueKind == JsonValueKind.Array)
+            {
+                var matchedIds = new HashSet<int>();
+                foreach (var item in idsProp.EnumerateArray())
+                {
+                    if (item.TryGetInt32(out var idVal)) matchedIds.Add(idVal);
+                }
+
+                foreach (var g in candidateGrievances.Where(cg => matchedIds.Contains(cg.Id)))
+                {
+                    result.SimilarGrievances.Add(new SimilarGrievanceDto
+                    {
+                        Id = g.Id,
+                        TrackingId = g.TrackingId,
+                        Title = g.Title,
+                        Status = g.Status.ToString(),
+                        Department = g.Department?.DepartmentName ?? "General",
+                        CreatedAt = g.CreatedAt
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Single AI analysis call failed. Returning fallback.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Summary))
+        {
+            result.Summary = description.Length > 120 ? description.Substring(0, 120) : description;
         }
 
         return result;
     }
 
-    public async Task<string> GenerateSummaryAsync(string title, string description, CancellationToken cancellationToken = default)
+    public async Task<AIChatResponse> ChatAsync(AIChatRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = @"You are a strict summarization engine.
-Your task is to summarize the following public grievance.
+        if (string.IsNullOrWhiteSpace(request.Message))
+        {
+            return new AIChatResponse { Reply = "Hello! How can I assist you with the Grievance Management System today?" };
+        }
 
-Rules:
-1. Output a plain text summary in maximum 80 words.
-2. NO explanations, NO intro text like 'Here is the summary'.
-3. NO markdown, NO bullet points.";
+        string departmentsList = "Roads, Water Supply, Electricity, Sanitation, Health, Transport, Education, General";
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var deps = await db.Departments.Select(d => d.DepartmentName).ToListAsync(cancellationToken);
+            if (deps.Any()) departmentsList = string.Join(", ", deps);
+        }
+        catch { }
 
-        var userPrompt = $"Title: {title}\nDescription: {description}";
+        var systemInstructions = $@"You are GMS Smart, the official AI assistant of the Grievance Management System.
+You help citizens:
+- Choose the correct department (Available Departments: {departmentsList})
+- Understand grievance statuses (Submitted, Assigned, In Progress, Resolved, Closed, Reopened)
+- Explain the grievance filing process and recommended attachments (documents/photos under 5MB)
+- Explain Tracking IDs (e.g. GMS-2026-XXXXXX)
 
-        var result = await GenerateResponseAsync(systemPrompt, userPrompt, cancellationToken);
-        return result;
+STRICT RULES:
+1. You NEVER invent government policies or laws.
+2. You NEVER perform administrative actions, submit grievances, or modify data.
+3. If uncertain or for complex legal disputes, tell the citizen to contact the municipal office.
+4. Keep replies helpful, polite, and concise (max 80 words).";
+
+        var chatHistoryPrompt = string.Join("\n", request.History.TakeLast(6).Select(h => $"{h.Sender.ToUpper()}: {h.Text}"));
+        var fullPrompt = $"{systemInstructions}\n\nCONVERSATION HISTORY:\n{chatHistoryPrompt}\nUSER: {request.Message}\nASSISTANT:";
+
+        try
+        {
+            var reply = await GenerateDirectResponseAsync(fullPrompt, cancellationToken);
+            if (string.IsNullOrWhiteSpace(reply))
+            {
+                reply = "I am here to help you navigate the Grievance Management System. Please let me know if you need help choosing a department or tracking your status.";
+            }
+            return new AIChatResponse { Reply = reply };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GMS Smart chat call failed.");
+            return new AIChatResponse { Reply = "I am currently undergoing brief maintenance. Please try again shortly or contact the municipal helpline." };
+        }
     }
 
     public async Task<object> GetHealthStatusAsync(CancellationToken cancellationToken = default)
@@ -167,7 +295,6 @@ Rules:
         try
         {
             var sw = Stopwatch.StartNew();
-            // Ping the Ollama API directly for health check
             var response = await _httpClient.GetAsync("/api/tags", cancellationToken);
             sw.Stop();
 

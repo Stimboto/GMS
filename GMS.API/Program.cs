@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using GMS.API.Middleware;
 using GMS.Application.Interfaces;
 using GMS.Infrastructure.Data;
@@ -10,7 +12,13 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -48,6 +56,7 @@ builder.Services.AddScoped<IRealTimeNotifier, GMS.API.Services.SignalRNotifier>(
 builder.Services.AddScoped<IAuditLogRepository, GMS.Infrastructure.Repositories.AuditLogRepository>();
 builder.Services.AddScoped<IAuditLogService, GMS.Application.Services.AuditLogService>();
 builder.Services.AddScoped<IUserService, GMS.Application.Services.UserService>();
+builder.Services.AddScoped<IDepartmentService, GMS.Application.Services.DepartmentService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -72,6 +81,19 @@ builder.Services.AddAuthentication(x =>
         ValidAudience = jwtSettings["Audience"],
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
+    };
+    x.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 

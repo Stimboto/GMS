@@ -4,6 +4,7 @@ using GMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GMS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260807091444_AddIsInternalToStatusHistory")]
+    partial class AddIsInternalToStatusHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -368,9 +371,6 @@ namespace GMS.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AttachmentId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("ChangedAt")
                         .HasColumnType("datetime2");
 
@@ -406,8 +406,6 @@ namespace GMS.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AttachmentId");
 
                     b.HasIndex("ChangedByUserId");
 
@@ -529,10 +527,6 @@ namespace GMS.Infrastructure.Migrations
 
             modelBuilder.Entity("GMS.Domain.Entities.StatusHistory", b =>
                 {
-                    b.HasOne("GMS.Domain.Entities.Attachment", "Attachment")
-                        .WithMany()
-                        .HasForeignKey("AttachmentId");
-
                     b.HasOne("GMS.Domain.Entities.User", "ChangedByUser")
                         .WithMany()
                         .HasForeignKey("ChangedByUserId")
@@ -544,8 +538,6 @@ namespace GMS.Infrastructure.Migrations
                         .HasForeignKey("GrievanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Attachment");
 
                     b.Navigation("ChangedByUser");
 

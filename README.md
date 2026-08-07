@@ -1,8 +1,25 @@
-# GMS - Enterprise Grievance Management System
+<div align="center">
 
-## Project Overview
+# 🏛️ GMS
 
-GMS (Grievance Management System) is an enterprise-grade platform designed to streamline issue reporting, tracking, and resolution between citizens and authorities. It provides a transparent, secure, and AI-driven environment for efficient public administration and grievance handling.
+### **Report • Track • Resolve**
+
+*An enterprise-grade platform designed to streamline issue reporting, tracking, and resolution between citizens and authorities.*
+
+<p align="center">
+<img src="https://img.shields.io/badge/Frontend-Angular_17-DD0031?style=for-the-badge&logo=angular&logoColor=white"/>
+<img src="https://img.shields.io/badge/Backend-.NET_10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white"/>
+<img src="https://img.shields.io/badge/Database-SQL_Server-CC2927?style=for-the-badge&logo=microsoft-sql-server&logoColor=white"/>
+<img src="https://img.shields.io/badge/AI-Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white"/>
+</p>
+
+<p align="center">
+<i>Transparent • Secure • AI-Driven</i>
+</p>
+
+</div>
+
+---
 
 ## Architecture
 
@@ -31,6 +48,7 @@ GMS (Grievance Management System) is an enterprise-grade platform designed to st
 - **Database**: Microsoft SQL Server 2022
 - **AI/ML**: Ollama (Local LLM Integration)
 - **DevOps**: Docker, Docker Compose, Nginx
+
 
 ## Getting Started
 
@@ -63,15 +81,6 @@ docker compose up --build
 - **Swagger Documentation**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
 
 *(Note: The API is reverse-proxied through Nginx on port 80 under the `/api` and `/hubs` paths, but Swagger is exposed directly on port 8080 for development).*
-
-## Default Admin
-
-In Development mode, a bootstrap administrator is automatically seeded into the database on startup.
-
-- **Email**: `admin@gms.com`
-- **Password**: `Admin@123`
-
-> **IMPORTANT**: These credentials **MUST** be changed in Production environments.
 
 ## Docker
 

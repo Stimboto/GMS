@@ -22,14 +22,14 @@ public class AIController : BaseApiController
         return Ok(status);
     }
 
-    [HttpPost("category")]
-    [Authorize(Policy = "AdminPolicy")]
+    [HttpPost("predict-category")]
+    [Authorize]
     public async Task<IActionResult> TestCategory([FromBody] AITestRequest request, CancellationToken cancellationToken)
     {
         try
         {
             var result = await _aiService.CategorizeGrievanceAsync(request.Title, request.Description, cancellationToken);
-            return Ok(new AIResponse { Result = result });
+            return Ok(new { Prediction = result });
         }
         catch (InvalidOperationException ex)
         {
@@ -41,14 +41,14 @@ public class AIController : BaseApiController
         }
     }
 
-    [HttpPost("priority")]
-    [Authorize(Policy = "AdminPolicy")]
+    [HttpPost("predict-priority")]
+    [Authorize]
     public async Task<IActionResult> TestPriority([FromBody] AITestRequest request, CancellationToken cancellationToken)
     {
         try
         {
             var result = await _aiService.DetectPriorityAsync(request.Title, request.Description, cancellationToken);
-            return Ok(new AIResponse { Result = result });
+            return Ok(new { Prediction = result });
         }
         catch (InvalidOperationException ex)
         {
@@ -60,14 +60,14 @@ public class AIController : BaseApiController
         }
     }
 
-    [HttpPost("summary")]
-    [Authorize(Policy = "AdminPolicy")]
+    [HttpPost("generate-summary")]
+    [Authorize]
     public async Task<IActionResult> TestSummary([FromBody] AITestRequest request, CancellationToken cancellationToken)
     {
         try
         {
             var result = await _aiService.GenerateSummaryAsync(request.Title, request.Description, cancellationToken);
-            return Ok(new AIResponse { Result = result });
+            return Ok(new { Prediction = result });
         }
         catch (InvalidOperationException ex)
         {
@@ -76,6 +76,36 @@ public class AIController : BaseApiController
         catch (Exception)
         {
             return StatusCode(500, new { Error = "AI service encountered an error." });
+        }
+    }
+
+    [HttpPost("analyze")]
+    [Authorize]
+    public async Task<IActionResult> Analyze([FromBody] AITestRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _aiService.AnalyzeAsync(request.Title, request.Description, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("chat")]
+    [Authorize]
+    public async Task<IActionResult> Chat([FromBody] AIChatRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _aiService.ChatAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = ex.Message });
         }
     }
 }

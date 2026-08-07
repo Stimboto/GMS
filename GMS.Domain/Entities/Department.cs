@@ -8,4 +8,5 @@ public class Department : BaseEntity
     public string? Description { get; set; }
 
     public ICollection<Grievance> Grievances { get; set; } = new List<Grievance>();
+    public ICollection<User> Officers { get; set; } = new List<User>();
 }

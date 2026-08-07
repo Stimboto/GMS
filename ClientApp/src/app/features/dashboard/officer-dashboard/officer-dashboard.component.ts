@@ -89,7 +89,7 @@ import { SignalRService } from '../../../core/services/signalr.service';
             <h4 class="title">{{ g.title }}</h4>
             <p class="desc">{{ g.description }}</p>
             <div class="card-footer">
-              <span class="citizen"><mat-icon>person</mat-icon> {{ g.submittedByName || 'Unknown Citizen' }}</span>
+                    <span class="text-xs text-gray-500 flex items-center gap-1"><mat-icon>person</mat-icon> {{ g.submittedBy || 'Unknown Citizen' }}</span>
               <span class="priority" [ngClass]="g.priority.toLowerCase()">{{ g.priority }}</span>
             </div>
           </div>

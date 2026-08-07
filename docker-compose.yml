@@ -11,10 +11,10 @@ services:
       - sql-data:/var/opt/mssql
     healthcheck:
       test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}", "-C", "-Q", "SELECT 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     networks:
       - gms-network
     # Note: No ports exposed to host. The database is only accessible inside the gms-network.
@@ -27,6 +27,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - AI__BaseUrl=http://gms-ollama:11434
+      - AI__Model=llama3.2:1b
     depends_on:
       gms-sqlserver:
         condition: service_healthy
@@ -53,34 +56,33 @@ services:
     image: ollama/ollama:latest
     container_name: gms-ollama
     restart: unless-stopped
-    profiles:
-      - ai
     volumes:
       - ollama-data:/root/.ollama
     networks:
       - gms-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
+    # Initialization container to automatically pull the model on startup if it doesn't exist
+    # Can be run manually via: docker compose run --rm ollama-init
     # Initialization container to automatically pull the model on startup if it doesn't exist
     # Can be run manually via: docker compose run --rm ollama-init
 
   ollama-init:
     image: curlimages/curl:latest
     container_name: ollama-init
-    profiles:
-      - ai
     depends_on:
-      gms-ollama:
-        condition: service_healthy
+      - gms-ollama
     networks:
       - gms-network
     command: >
-      sh -c "echo 'Pulling Llama3.2:1b...' && curl -X POST http://gms-ollama:11434/api/pull -d '{\"name\":\"llama3.2:1b\"}' && echo 'Done!'"
-
+      sh -c "
+      echo 'Waiting for Ollama to be ready...';
+      until curl -s -f http://gms-ollama:11434/api/version; do sleep 5; done;
+      echo 'Ollama is up. Pulling Llama3.2:1b...';
+      until curl -s -f -X POST http://gms-ollama:11434/api/pull -d '{\"name\":\"llama3.2:1b\"}'; do
+        echo 'Pull failed, retrying in 10 seconds...';
+        sleep 10;
+      done;
+      echo 'Done! AI is ready.';
+      "
 volumes:
   sql-data:
   api-uploads:

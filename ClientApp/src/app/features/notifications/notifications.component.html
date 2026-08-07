@@ -24,7 +24,7 @@
       </app-empty-state>
     </div>
 
-    <mat-list *ngIf="!loading && notifications.length > 0" class="notification-list p-0">
+    <mat-list *ngIf="!loading && notifications.length > 0" class="notification-list p-0" style="padding-bottom: 8px !important; padding-top: 8px !important;">
       <ng-container *ngFor="let notification of notifications; let last = last">
         <mat-list-item [class.unread]="!notification.isRead" class="notification-item py-2">
           

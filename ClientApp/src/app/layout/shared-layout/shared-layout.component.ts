@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { User } from '../../core/models/models';
 import { SignalRService } from '../../core/services/signalr.service';
+import { GmsSmartChatComponent } from '../../shared/components/gms-smart-chat/gms-smart-chat.component';
 
 interface NavItem {
   path: string;
@@ -36,7 +37,8 @@ interface NavItem {
     MatMenuModule,
     MatBadgeModule,
     MatDividerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    GmsSmartChatComponent
   ],
   templateUrl: './shared-layout.component.html',
   styleUrls: ['./shared-layout.component.css']
@@ -58,6 +60,7 @@ export class SharedLayoutComponent implements OnInit {
     { path: '/citizen/dashboard', icon: 'dashboard', label: 'Dashboard', roles: ['Citizen'] },
     { path: '/citizen/grievances', icon: 'list_alt', label: 'My Grievances', roles: ['Citizen'] },
     { path: '/citizen/grievances/create', icon: 'add_circle', label: 'Create Grievance', roles: ['Citizen'] },
+    { path: '/citizen/chat', icon: 'smart_toy', label: 'GMS Smart', roles: ['Citizen'] },
     
     // Officer
     { path: '/officer/dashboard', icon: 'dashboard', label: 'Dashboard', roles: ['Officer'] },
@@ -91,11 +94,11 @@ export class SharedLayoutComponent implements OnInit {
     });
 
     this.signalRService.startConnection();
-    this.signalRService.notificationReceived.subscribe(data => {
+    this.signalRService.notificationReceived.subscribe((data: any) => {
       // Increment badge
       this.unreadNotifications++;
       // Show toast
-      this.snackBar.open(`${data.title}: ${data.message}`, 'Close', {
+      this.snackBar.open(`${data.title || 'Notification'}: ${data.message || ''}`, 'Close', {
         duration: 5000,
         horizontalPosition: 'end',
         verticalPosition: 'bottom'

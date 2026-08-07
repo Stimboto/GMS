@@ -20,6 +20,10 @@ import { StatusHistory } from '../../../core/models/models';
             <span class="timeline-date" *ngIf="step.date">{{ step.date | date:'short' }}</span>
           </div>
           <p class="timeline-remarks" *ngIf="step.remarks">{{ step.remarks }}</p>
+          <div class="timeline-attachment" *ngIf="step.attachmentUrl">
+             <mat-icon inline="true">attach_file</mat-icon>
+             <a [href]="step.attachmentUrl" target="_blank">{{ step.attachmentName || 'View File' }}</a>
+          </div>
           <p class="timeline-author" *ngIf="step.author">By: {{ step.author }}</p>
         </div>
       </div>
@@ -95,6 +99,21 @@ import { StatusHistory } from '../../../core/models/models';
       color: var(--text-secondary);
       font-style: italic;
     }
+    .timeline-attachment {
+      margin: 8px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+    .timeline-attachment a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .timeline-attachment a:hover {
+      text-decoration: underline;
+    }
 
     /* States */
     .timeline-item.completed .dot {
@@ -130,7 +149,7 @@ export class VerticalTimelineComponent {
     
     this.steps = flow.map(statusName => {
       // Find if this status exists in history
-      const historyRecord = val.find(h => h.status === statusName);
+      const historyRecord = val.find(h => h.newStatus === statusName);
       
       return {
         status: statusName,
@@ -138,7 +157,9 @@ export class VerticalTimelineComponent {
         current: false,
         date: historyRecord?.changedAt,
         remarks: historyRecord?.remarks,
-        author: historyRecord?.changedByUserName
+        author: historyRecord?.changedByUserName,
+        attachmentUrl: historyRecord?.attachmentUrl,
+        attachmentName: historyRecord?.attachmentName
       };
     });
 

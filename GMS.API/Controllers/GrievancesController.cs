@@ -21,7 +21,7 @@ public class GrievancesController : BaseApiController
 
     [HttpPost]
     [Authorize(Policy = "CitizenPolicy")]
-    public async Task<IActionResult> Create([FromBody] CreateGrievanceRequest request)
+    public async Task<IActionResult> Create([FromForm] CreateGrievanceRequest request)
     {
         try
         {
@@ -147,8 +147,8 @@ public class GrievancesController : BaseApiController
     }
 
     [HttpPut("{id}/status")]
-    [Authorize(Policy = "OfficerPolicy")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
+    [Authorize(Roles = "Admin,Officer")]
+    public async Task<IActionResult> UpdateStatus(int id, [FromForm] UpdateStatusRequest request)
     {
         try
         {
@@ -169,6 +169,36 @@ public class GrievancesController : BaseApiController
         }
     }
 
+    [HttpPost("{id}/remarks")]
+    [Authorize(Roles = "Admin,Officer")]
+    public async Task<IActionResult> AddRemark(int id, [FromForm] AddRemarkRequest request)
+    {
+        try
+        {
+            await _grievanceService.AddRemarkAsync(id, request, CurrentUserId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPut("history/{historyId}/toggle-internal")]
+    [Authorize(Roles = "Admin,Officer")]
+    public async Task<IActionResult> ToggleHistoryInternal(int historyId, [FromBody] bool isInternal)
+    {
+        try
+        {
+            await _grievanceService.ToggleHistoryInternalAsync(historyId, isInternal, CurrentUserId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     // ==========================================
     // ADMIN FEATURES
     // ==========================================
@@ -183,11 +213,11 @@ public class GrievancesController : BaseApiController
 
     [HttpPut("{id}/assign")]
     [Authorize(Policy = "AdminPolicy")]
-    public async Task<IActionResult> AssignOfficer(int id, [FromBody] AssignOfficerRequest request)
+    public async Task<IActionResult> AssignOfficer(int id, [FromForm] AssignOfficerRequest request)
     {
         try
         {
-            await _grievanceService.AssignOfficerAsync(id, request);
+            await _grievanceService.AssignOfficerAsync(id, request, CurrentUserId);
             return NoContent();
         }
         catch (KeyNotFoundException)

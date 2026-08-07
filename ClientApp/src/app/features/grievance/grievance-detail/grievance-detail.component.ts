@@ -9,6 +9,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { GrievanceService } from '../../../core/services/grievance.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
@@ -35,6 +38,9 @@ import { FormsModule } from '@angular/forms';
     MatProgressBarModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatCheckboxModule,
     VerticalTimelineComponent,
     AiCardComponent,
     FileUploadComponent,
@@ -62,6 +68,9 @@ export class GrievanceDetailComponent implements OnInit {
 
   // Actions
   actionLoading = false;
+  actionRemark = '';
+  actionIsInternal = true;
+  actionFile: File | null = null;
   feedbackRating = 0;
   feedbackRemarks = '';
   feedbackLoading = false;
@@ -105,6 +114,15 @@ export class GrievanceDetailComponent implements OnInit {
     this.selectedFiles = files;
   }
 
+  onActionFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.actionFile = file;
+    } else {
+      this.actionFile = null;
+    }
+  }
+
   onUpload() {
     if (this.selectedFiles.length > 0 && this.grievance) {
       this.uploading = true;
@@ -128,16 +146,70 @@ export class GrievanceDetailComponent implements OnInit {
 
   updateStatus(newStatus: string) {
     if (!this.grievance) return;
+    if (newStatus === 'Closed' && !this.actionRemark.trim()) {
+      this.snackBar.open('Please provide a remark when closing the grievance.', 'Close', { duration: 3000, panelClass: 'error-snackbar' });
+      return;
+    }
+    
     this.actionLoading = true;
-    this.grievanceService.updateStatus(this.grievance.id, { status: newStatus, remarks: 'Updated by ' + this.user?.role }).subscribe({
+    const remarkToSend = this.actionRemark.trim() || 'Updated by ' + this.user?.role;
+    
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    formData.append('remarks', remarkToSend);
+    if (this.actionFile) {
+      formData.append('file', this.actionFile);
+    }
+
+    this.grievanceService.updateStatus(this.grievance.id, formData).subscribe({
       next: () => {
         this.actionLoading = false;
+        this.actionRemark = '';
+        this.actionFile = null;
         this.snackBar.open(`Status updated to ${newStatus}`, 'Close', { duration: 3000, panelClass: 'success-snackbar' });
         this.loadGrievance(this.grievance!.id);
       },
       error: () => {
         this.actionLoading = false;
         this.snackBar.open('Failed to update status', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  addRemark() {
+    if (!this.grievance || (!this.actionRemark.trim() && !this.actionFile)) return;
+    this.actionLoading = true;
+
+    const formData = new FormData();
+    formData.append('remarks', this.actionRemark.trim());
+    formData.append('isInternal', String(this.actionIsInternal));
+    if (this.actionFile) {
+      formData.append('file', this.actionFile);
+    }
+
+    this.grievanceService.addRemark(this.grievance.id, formData).subscribe({
+      next: () => {
+        this.actionLoading = false;
+        this.actionRemark = '';
+        this.actionFile = null;
+        this.snackBar.open('Remark added successfully', 'Close', { duration: 3000, panelClass: 'success-snackbar' });
+        this.loadGrievance(this.grievance!.id);
+      },
+      error: () => {
+        this.actionLoading = false;
+        this.snackBar.open('Failed to add remark', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  toggleInternal(historyId: number, isInternal: boolean) {
+    this.grievanceService.toggleHistoryInternal(historyId, isInternal).subscribe({
+      next: () => {
+        this.snackBar.open('Visibility updated', 'Close', { duration: 2000, panelClass: 'success-snackbar' });
+        this.loadGrievance(this.grievance!.id);
+      },
+      error: () => {
+        this.snackBar.open('Failed to update visibility', 'Close', { duration: 3000, panelClass: 'error-snackbar' });
       }
     });
   }
@@ -168,9 +240,18 @@ export class GrievanceDetailComponent implements OnInit {
   assignOfficer() {
     if (!this.grievance || !this.selectedOfficerId) return;
     this.actionLoading = true;
-    this.grievanceService.assignOfficer(this.grievance.id, { officerId: this.selectedOfficerId }).subscribe({
+    
+    const formData = new FormData();
+    formData.append('officerId', String(this.selectedOfficerId));
+    if (this.actionRemark) formData.append('remarks', this.actionRemark.trim());
+    formData.append('isInternal', String(this.actionIsInternal));
+    if (this.actionFile) formData.append('file', this.actionFile);
+
+    this.grievanceService.assignOfficer(this.grievance.id, formData).subscribe({
       next: () => {
         this.actionLoading = false;
+        this.actionRemark = '';
+        this.actionFile = null;
         this.snackBar.open('Officer assigned successfully', 'Close', { duration: 3000, panelClass: 'success-snackbar' });
         this.loadGrievance(this.grievance!.id);
       },

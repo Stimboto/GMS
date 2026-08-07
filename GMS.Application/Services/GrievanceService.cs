@@ -14,6 +14,7 @@ public class GrievanceService : IGrievanceService
     private readonly IOllamaService _ollamaService;
     private readonly IRealTimeNotifier _notifier;
     private readonly IAuditLogService _auditLogService;
+    private readonly IFileStorageService _fileStorageService;
 
     public GrievanceService(
         IGrievanceRepository grievanceRepository,
@@ -22,7 +23,8 @@ public class GrievanceService : IGrievanceService
         INotificationService notificationService,
         IOllamaService ollamaService,
         IRealTimeNotifier notifier,
-        IAuditLogService auditLogService)
+        IAuditLogService auditLogService,
+        IFileStorageService fileStorageService)
     {
         _grievanceRepository = grievanceRepository;
         _departmentRepository = departmentRepository;
@@ -31,6 +33,7 @@ public class GrievanceService : IGrievanceService
         _ollamaService = ollamaService;
         _notifier = notifier;
         _auditLogService = auditLogService;
+        _fileStorageService = fileStorageService;
     }
 
     private GrievanceResponse MapToResponse(Grievance grievance)
@@ -50,7 +53,29 @@ public class GrievanceService : IGrievanceService
             CreatedAt = grievance.CreatedAt,
             UpdatedAt = grievance.UpdatedAt,
             SatisfactionRating = grievance.SatisfactionRating,
-            FeedbackRemarks = grievance.FeedbackRemarks
+            FeedbackRemarks = grievance.FeedbackRemarks,
+            Summary = grievance.Summary ?? string.Empty,
+            Attachments = grievance.Attachments?.Select(a => new AttachmentResponse
+            {
+                Id = a.Id,
+                FileName = a.FileName,
+                ContentType = a.ContentType,
+                UploadedAt = a.CreatedAt,
+                DownloadUrl = a.FilePath
+            }).ToList() ?? new List<AttachmentResponse>(),
+            StatusHistories = grievance.StatusHistories?.Select(sh => new StatusHistoryResponse
+            {
+                Id = sh.Id,
+                OldStatus = sh.OldStatus,
+                NewStatus = sh.NewStatus,
+                Remarks = sh.Remarks,
+                IsInternal = sh.IsInternal,
+                AttachmentUrl = sh.Attachment?.FilePath,
+                AttachmentName = sh.Attachment?.FileName,
+                ChangedAt = sh.ChangedAt,
+                ChangedByUserId = sh.ChangedByUserId,
+                ChangedByUserName = sh.ChangedByUser?.FullName ?? "Unknown"
+            }).ToList() ?? new List<StatusHistoryResponse>()
         };
     }
 
@@ -58,20 +83,25 @@ public class GrievanceService : IGrievanceService
     {
         if (string.IsNullOrWhiteSpace(request.Title)) throw new ArgumentException("Title is required.");
         if (string.IsNullOrWhiteSpace(request.Description)) throw new ArgumentException("Description is required.");
-        if (string.IsNullOrWhiteSpace(request.Category)) throw new ArgumentException("Category is required.");
 
         var department = await _departmentRepository.GetByIdAsync(request.DepartmentId);
         if (department == null) throw new ArgumentException("Department not found.");
+
+        var categoryName = !string.IsNullOrWhiteSpace(request.Category) && request.Category != "Pending"
+            ? request.Category
+            : department.DepartmentName;
+
+        var hasAiPriority = !string.IsNullOrWhiteSpace(request.Priority) && request.Priority != "Pending";
 
         var grievance = new Grievance
         {
             TrackingId = $"GMS-{DateTime.UtcNow.Year}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
             Title = request.Title,
             Description = request.Description,
-            Summary = "Pending AI Analysis...",
+            Summary = !string.IsNullOrWhiteSpace(request.Summary) ? request.Summary : request.Description,
             DepartmentId = request.DepartmentId,
-            Category = "Pending",
-            Priority = GrievancePriority.Medium,
+            Category = categoryName,
+            Priority = hasAiPriority && Enum.TryParse<GrievancePriority>(request.Priority, true, out var p) ? p : GrievancePriority.Medium,
             SubmittedByUserId = userId,
             Status = GrievanceStatus.Submitted
         };
@@ -83,16 +113,42 @@ public class GrievanceService : IGrievanceService
             Remarks = "Grievance submitted by citizen.",
             ChangedByUserId = userId
         };
+
+        if (request.File != null)
+        {
+            using var stream = request.File.OpenReadStream();
+            var filePath = await _fileStorageService.SaveFileAsync(stream, request.File.FileName, request.File.ContentType);
+            var attachment = new Attachment
+            {
+                FileName = request.File.FileName,
+                FilePath = filePath,
+                ContentType = request.File.ContentType,
+                // GrievanceId will be set after AddAsync or we just leave it to EF navigation properties
+                // but since Grievance doesn't have an ID yet, we just add it to the collection
+            };
+            grievance.Attachments.Add(attachment);
+            statusHistory.Attachment = attachment;
+        }
+
         grievance.StatusHistories.Add(statusHistory);
 
         var created = await _grievanceRepository.AddAsync(grievance);
         
-        // Trigger AI analysis in background
-        _ = _ollamaService.AnalyzeGrievanceAsync(created.Id, request.Description);
+        // Trigger AI analysis in background ONLY if frontend didn't already provide priority/summary
+        if (!hasAiPriority)
+        {
+            _ = _ollamaService.AnalyzeGrievanceAsync(created.Id, request.Description);
+        }
 
         var createdWithDetails = await _grievanceRepository.GetGrievanceWithDetailsAsync(created.Id);
 
         await _notificationService.CreateNotificationAsync(userId, "Grievance Submitted", $"Your grievance '{created.Title}' has been submitted successfully.");
+        
+        var admins = await _userRepository.FindAsync(u => u.Role.Name == "Admin");
+        foreach(var admin in admins)
+        {
+            await _notificationService.CreateNotificationAsync(admin.Id, "New Grievance", $"A new grievance '{created.Title}' requires assignment.");
+        }
         await _notifier.NotifyRoleAsync("Admin", "New Grievance", $"A new grievance '{created.Title}' requires assignment.");
 
         return MapToResponse(createdWithDetails!);
@@ -117,6 +173,11 @@ public class GrievanceService : IGrievanceService
         if (userRole == "Officer" && grievance.AssignedOfficerId != userId)
         {
             throw new UnauthorizedAccessException("You can only view grievances assigned to you.");
+        }
+
+        if (userRole == "Citizen")
+        {
+            grievance.StatusHistories = grievance.StatusHistories.Where(sh => !sh.IsInternal).ToList();
         }
 
         return MapToResponse(grievance);
@@ -169,7 +230,10 @@ public class GrievanceService : IGrievanceService
         var grievance = await _grievanceRepository.GetByIdAsync(id);
         if (grievance == null) throw new KeyNotFoundException("Grievance not found.");
 
-        if (grievance.AssignedOfficerId != officerId)
+        var user = await _userRepository.GetByIdAsync(officerId);
+        bool isAdmin = user != null && user.Role?.Name == "Admin";
+
+        if (!isAdmin && grievance.AssignedOfficerId != officerId)
             throw new UnauthorizedAccessException("You can only update status for grievances assigned to you.");
 
         // Validate state transition
@@ -184,10 +248,25 @@ public class GrievanceService : IGrievanceService
             OldStatus = grievance.Status,
             NewStatus = request.Status,
             Remarks = request.Remarks,
-            ImageUrl = request.ImageUrl,
             ChangedByUserId = officerId
         };
         
+        if (request.File != null)
+        {
+            using var stream = request.File.OpenReadStream();
+            var filePath = await _fileStorageService.SaveFileAsync(stream, request.File.FileName, request.File.ContentType);
+            var attachment = new Attachment
+            {
+                FileName = request.File.FileName,
+                FilePath = filePath,
+                ContentType = request.File.ContentType,
+                GrievanceId = grievance.Id
+            };
+            if (grievance.Attachments == null) grievance.Attachments = new List<Attachment>();
+            grievance.Attachments.Add(attachment);
+            history.Attachment = attachment;
+        }
+
         grievance.Status = request.Status;
         
         grievance.StatusHistories.Add(history);
@@ -196,6 +275,41 @@ public class GrievanceService : IGrievanceService
         string message = $"The status of your grievance '{grievance.TrackingId}' has been updated to {request.Status}.";
         await _notificationService.CreateNotificationAsync(grievance.SubmittedByUserId, "Grievance Status Updated", message);
         await _notifier.NotifyUserAsync(grievance.SubmittedByUserId, "Status Update", message);
+    }
+
+    public async Task AddRemarkAsync(int id, AddRemarkRequest request, int userId)
+    {
+        var grievance = await _grievanceRepository.GetByIdAsync(id);
+        if (grievance == null) throw new KeyNotFoundException("Grievance not found.");
+
+        var history = new StatusHistory
+        {
+            GrievanceId = grievance.Id,
+            OldStatus = grievance.Status,
+            NewStatus = grievance.Status,
+            Remarks = request.Remarks,
+            IsInternal = request.IsInternal,
+            ChangedByUserId = userId
+        };
+
+        if (request.File != null)
+        {
+            using var stream = request.File.OpenReadStream();
+            var filePath = await _fileStorageService.SaveFileAsync(stream, request.File.FileName, request.File.ContentType);
+            var attachment = new Attachment
+            {
+                FileName = request.File.FileName,
+                FilePath = filePath,
+                ContentType = request.File.ContentType,
+                GrievanceId = grievance.Id
+            };
+            if (grievance.Attachments == null) grievance.Attachments = new List<Attachment>();
+            grievance.Attachments.Add(attachment);
+            history.Attachment = attachment;
+        }
+
+        grievance.StatusHistories.Add(history);
+        await _grievanceRepository.UpdateAsync(grievance);
     }
 
     private bool IsValidTransition(GrievanceStatus current, GrievanceStatus next)
@@ -265,7 +379,7 @@ public class GrievanceService : IGrievanceService
         return grievances.Select(MapToResponse);
     }
 
-    public async Task AssignOfficerAsync(int id, AssignOfficerRequest request)
+    public async Task AssignOfficerAsync(int id, AssignOfficerRequest request, int adminId)
     {
         var grievance = await _grievanceRepository.GetByIdAsync(id);
         if (grievance == null) throw new KeyNotFoundException("Grievance not found.");
@@ -281,10 +395,38 @@ public class GrievanceService : IGrievanceService
         }
 
         grievance.AssignedOfficerId = request.OfficerId;
+        var oldStatus = grievance.Status;
         if (grievance.Status == GrievanceStatus.Submitted)
         {
             grievance.Status = GrievanceStatus.Assigned;
         }
+
+        var history = new StatusHistory
+        {
+            OldStatus = oldStatus,
+            NewStatus = grievance.Status,
+            Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? $"Assigned to {officer.FullName}" : request.Remarks,
+            IsInternal = request.IsInternal,
+            ChangedByUserId = adminId
+        };
+
+        if (request.File != null)
+        {
+            using var stream = request.File.OpenReadStream();
+            var filePath = await _fileStorageService.SaveFileAsync(stream, request.File.FileName, request.File.ContentType);
+            var attachment = new Attachment
+            {
+                FileName = request.File.FileName,
+                FilePath = filePath,
+                ContentType = request.File.ContentType,
+                GrievanceId = grievance.Id
+            };
+            if (grievance.Attachments == null) grievance.Attachments = new List<Attachment>();
+            grievance.Attachments.Add(attachment);
+            history.Attachment = attachment;
+        }
+
+        grievance.StatusHistories.Add(history);
 
         await _grievanceRepository.UpdateAsync(grievance);
 
@@ -307,6 +449,25 @@ public class GrievanceService : IGrievanceService
         if (grievance.AssignedOfficerId.HasValue)
         {
             await _notificationService.CreateNotificationAsync(grievance.AssignedOfficerId.Value, "Department Changed", $"The department for grievance '{grievance.Title}' has been changed to {department.DepartmentName}.");
+        }
+    }
+
+    public async Task ToggleHistoryInternalAsync(int historyId, bool isInternal, int userId)
+    {
+        var grievance = await _grievanceRepository.GetAllGrievancesWithDetailsAsync();
+        var targetHistory = grievance.SelectMany(g => g.StatusHistories).FirstOrDefault(h => h.Id == historyId);
+        
+        if (targetHistory == null) throw new KeyNotFoundException("History record not found.");
+
+        targetHistory.IsInternal = isInternal;
+        
+        // Find the parent grievance and update it
+        var parentGrievance = await _grievanceRepository.GetByIdAsync(targetHistory.GrievanceId);
+        if (parentGrievance != null)
+        {
+            // Just saving changes should suffice, since tracking might be on depending on the repo implementation
+            // The simplest is to just call Update on the parent since the child is modified
+            await _grievanceRepository.UpdateAsync(parentGrievance);
         }
     }
 }

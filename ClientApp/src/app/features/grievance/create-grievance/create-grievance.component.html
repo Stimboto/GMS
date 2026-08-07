@@ -13,6 +13,39 @@
     <div class="form-section gms-card">
       <form [formGroup]="grievanceForm" (ngSubmit)="onSubmit()" class="form-content">
         
+        <!-- Similar Grievances Warning Card -->
+        <div class="similar-alert-card mb-4" *ngIf="showSimilarAlert && similarGrievances.length > 0">
+          <div class="similar-header">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <div>
+              <h4 class="similar-title">Similar Grievance Detected</h4>
+              <p class="similar-subtitle">We found {{ similarGrievances.length }} existing grievance(s) that appear similar to yours.</p>
+            </div>
+          </div>
+          
+          <div class="similar-list">
+            <div class="similar-item" *ngFor="let item of similarGrievances">
+              <div class="similar-info">
+                <span class="tracking-id">{{ item.trackingId }}</span>
+                <span class="item-title">{{ item.title }}</span>
+                <div class="item-meta">
+                  <span class="status-chip">{{ item.status }}</span>
+                  <span class="dept-name">{{ item.department }}</span>
+                </div>
+              </div>
+              <button mat-stroked-button color="primary" type="button" class="view-btn" (click)="openGrievanceDetails(item.id)">
+                View
+              </button>
+            </div>
+          </div>
+
+          <div class="similar-actions">
+            <button mat-button type="button" (click)="dismissSimilarAlert()" class="continue-btn">
+              Continue & Create New Grievance Anyway
+            </button>
+          </div>
+        </div>
+
         <div class="form-row">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Title</mat-label>
@@ -46,7 +79,11 @@
 
         <div class="form-row">
           <label class="section-label">Attachments (Optional)</label>
-          <app-file-upload (filesChanged)="onFilesChanged($event)"></app-file-upload>
+          <app-file-upload [multiple]="false" (filesChanged)="onFilesChanged($event)"></app-file-upload>
+          <p class="file-rules-note">
+            <mat-icon inline="true">info</mat-icon> Note: You can upload a maximum of 1 file (up to 5MB). 
+            Once the grievance is submitted, you cannot add more files.
+          </p>
         </div>
 
         <div class="actions">
@@ -63,22 +100,29 @@
     <div class="info-section">
       <div class="gms-card sticky-card">
         <h3>AI Assistant Preview</h3>
-        <p class="helper-text">As you type, our AI analyzes your grievance to determine priority and categorization automatically.</p>
+        <p class="helper-text mb-3">Click the button below to have our AI analyze your grievance to determine priority, summary, and check for similar issues.</p>
         
-        <div *ngIf="analyzing" class="analyzing-state">
-          <mat-spinner diameter="30"></mat-spinner>
-          <span>Analyzing description...</span>
+        <button mat-stroked-button color="accent" class="w-100 mb-4" 
+                [disabled]="analyzing || grievanceForm.get('description')?.invalid || grievanceForm.get('title')?.invalid"
+                (click)="analyzeWithAI(grievanceForm.value.title, grievanceForm.value.description)">
+          <mat-icon>auto_awesome</mat-icon>
+          Summarise & Analyze
+        </button>
+
+        <div *ngIf="analyzing" class="analyzing-state py-4 text-center">
+          <mat-spinner diameter="30" class="mx-auto"></mat-spinner>
+          <span class="d-block mt-2">Analyzing with Ollama...</span>
         </div>
 
         <app-ai-card 
-          *ngIf="!analyzing && (aiCategory || aiPriority)"
-          [category]="aiCategory"
-          [priority]="aiPriority">
+          *ngIf="!analyzing && (aiPriority || aiSummary)"
+          [priority]="aiPriority"
+          [summary]="aiSummary">
         </app-ai-card>
 
-        <div class="placeholder-state" *ngIf="!analyzing && !aiCategory && !aiPriority">
-          <mat-icon>auto_awesome</mat-icon>
-          <p>Start typing a description to see AI insights.</p>
+        <div class="placeholder-state" *ngIf="!analyzing && !aiPriority">
+          <mat-icon>lightbulb</mat-icon>
+          <p>Fill out the title and description, then click Summarise to see AI insights.</p>
         </div>
       </div>
     </div>

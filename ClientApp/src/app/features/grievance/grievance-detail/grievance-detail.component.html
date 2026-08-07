@@ -10,167 +10,72 @@
         <span class="custom-chip" [ngClass]="getStatusColor(grievance.status)">{{ grievance.status }}</span>
         <span class="custom-chip" [ngClass]="getPriorityColor(grievance.priority)">{{ grievance.priority }} Priority</span>
       </div>
-      <p class="subtitle">Submitted on {{ grievance.createdAt | date:'medium' }} by <span class="font-semibold">{{ grievance.submittedByName || 'Unknown Citizen' }}</span></p>
+      <p class="subtitle">Submitted on {{ grievance.createdAt | date:'medium' }} by <span class="font-semibold">{{ grievance.submittedBy || 'Unknown Citizen' }}</span></p>
     </div>
   </div>
 
-  <div class="detail-grid">
-    <!-- Main Content Left Column -->
-    <div class="main-column flex-col gap-3">
+  <!-- Top Grid Section -->
+  <div class="detail-grid mb-6">
+    
+    <!-- Main Column -->
+    <div class="main-column flex-col gap-4">
       
       <!-- Description Card -->
       <mat-card class="detail-card">
         <mat-card-header>
-          <mat-icon mat-card-avatar>description</mat-icon>
-          <mat-card-title>Description</mat-card-title>
+          <mat-card-title class="flex items-center gap-2">
+            <mat-icon>description</mat-icon> Description
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <p class="description-text">{{ grievance.description }}</p>
         </mat-card-content>
       </mat-card>
 
-      <!-- Vertical Timeline Card -->
-      <mat-card class="detail-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>history</mat-icon>
-          <mat-card-title>Timeline & History</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <app-vertical-timeline [histories]="grievance.statusHistories"></app-vertical-timeline>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Attachments Card -->
-      <mat-card class="detail-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>attach_file</mat-icon>
-          <mat-card-title>Attachments</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          
-          <div class="attachments-list" *ngIf="grievance.attachments && grievance.attachments.length > 0">
-            <div class="attachment-item" *ngFor="let file of grievance.attachments">
-              <mat-icon class="file-icon">{{ getFileIcon(file.fileName) }}</mat-icon>
-              <div class="file-info">
-                <span class="file-name">{{ file.fileName }}</span>
-                <span class="file-date">{{ file.createdAt | date:'short' }}</span>
-              </div>
-              <a mat-icon-button color="primary" [href]="file.filePath" target="_blank" download>
-                <mat-icon>download</mat-icon>
-              </a>
+      <!-- Info & AI Cards Row -->
+      <div class="info-ai-row">
+        
+        <!-- Information Card -->
+        <mat-card class="detail-card flex-1">
+          <mat-card-header>
+            <mat-card-title class="flex items-center gap-2">
+              <mat-icon>info</mat-icon> Information
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="meta-row">
+              <span class="meta-label">Department</span>
+              <span class="meta-value">{{ grievance.department || 'Unassigned' }}</span>
             </div>
-          </div>
-
-          <div class="empty-attachments" *ngIf="!grievance.attachments || grievance.attachments.length === 0">
-            <p>No attachments yet.</p>
-          </div>
-
-          <mat-divider class="my-3" *ngIf="user?.role !== 'Admin'"></mat-divider>
-
-          <!-- Upload Area (Hide for Admin if they don't upload) -->
-          <div class="upload-area-container" *ngIf="user?.role !== 'Admin'">
-            <h4 class="mb-2">Upload New File</h4>
-            <app-file-upload 
-              [multiple]="false" 
-              (filesChanged)="onFilesChanged($event)">
-            </app-file-upload>
-            
-            <div class="upload-actions" *ngIf="selectedFiles.length > 0">
-              <button mat-flat-button color="primary" (click)="onUpload()" [disabled]="uploading">
-                <mat-spinner diameter="20" *ngIf="uploading"></mat-spinner>
-                <span *ngIf="!uploading">Upload Selected File</span>
-              </button>
+            <mat-divider></mat-divider>
+            <div class="meta-row">
+              <span class="meta-label">Assigned Officer</span>
+              <span class="meta-value">{{ grievance.assignedOfficer || 'Unassigned' }}</span>
             </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
-    </div>
-
-    <!-- Sidebar Right Column -->
-    <div class="sidebar-column flex-col gap-3">
-      
-      <!-- Actions Card (Only for Officer/Admin) -->
-      <mat-card class="detail-card" *ngIf="user?.role === 'Officer' || user?.role === 'Admin'">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>build</mat-icon>
-          <mat-card-title>Actions</mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="action-buttons">
-          
-          <!-- Admin Assign Officer -->
-          <div *ngIf="user?.role === 'Admin' && grievance.status !== 'Closed'" class="mb-4">
-            <h4 class="mb-2 font-medium">Assign Officer</h4>
-            <div class="flex gap-2">
-              <mat-form-field appearance="outline" class="flex-1 w-full m-0 p-0">
-                <mat-label>Select Officer</mat-label>
-                <mat-select [(ngModel)]="selectedOfficerId">
-                  <mat-option *ngFor="let officer of officers" [value]="officer.id">
-                    <div class="flex justify-between items-center w-full">
-                      <span>{{ officer.fullName }}</span>
-                      <span class="text-xs text-gray-500">Cases: {{ officer.assignedCases }}</span>
-                    </div>
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
-              <button mat-flat-button color="primary" class="h-[56px]"
-                      [disabled]="!selectedOfficerId || actionLoading"
-                      (click)="assignOfficer()">
-                Assign
-              </button>
+            <mat-divider></mat-divider>
+            <div class="meta-row">
+              <span class="meta-label">Submitted On</span>
+              <span class="meta-value">{{ grievance.createdAt | date:'shortDate' }}</span>
             </div>
-            <mat-divider class="my-3"></mat-divider>
-          </div>
+          </mat-card-content>
+        </mat-card>
 
-          <button mat-stroked-button color="primary" class="w-100 mb-2" [disabled]="actionLoading"
-                  *ngIf="grievance.status === 'Submitted' || grievance.status === 'Pending'"
-                  (click)="updateStatus('In Progress')">
-            Mark In Progress
-          </button>
-          
-          <button mat-flat-button color="accent" class="w-100 mb-2" [disabled]="actionLoading"
-                  *ngIf="grievance.status === 'In Progress'"
-                  (click)="updateStatus('Resolved')">
-            Mark Resolved
-          </button>
-          
-          <button mat-stroked-button color="warn" class="w-100" [disabled]="actionLoading"
-                  *ngIf="grievance.status !== 'Closed' && user?.role === 'Admin'"
-                  (click)="updateStatus('Closed')">
-            Close Grievance
-          </button>
-          <p class="hint-text mt-2" *ngIf="actionLoading">Processing action...</p>
-        </mat-card-content>
-      </mat-card>
+        <!-- AI Insights Component -->
+        <div class="flex-1 m-0">
+          <app-ai-card 
+            [priority]="grievance.priority" 
+            [summary]="grievance.summary">
+          </app-ai-card>
+        </div>
 
-      <!-- Metadata Card -->
-      <mat-card class="detail-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>info</mat-icon>
-          <mat-card-title>Information</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="meta-row">
-            <span class="meta-label">Department</span>
-            <span class="meta-value">{{ grievance.departmentName || 'Unassigned' }}</span>
-          </div>
-          <mat-divider></mat-divider>
-          <div class="meta-row">
-            <span class="meta-label">Category</span>
-            <span class="meta-value">{{ grievance.category || 'N/A' }}</span>
-          </div>
-          <mat-divider></mat-divider>
-          <div class="meta-row">
-            <span class="meta-label">Assigned Officer</span>
-            <span class="meta-value">{{ grievance.assignedOfficerName || 'Unassigned' }}</span>
-          </div>
-        </mat-card-content>
-      </mat-card>
+      </div>
 
       <!-- Feedback Card -->
       <mat-card class="detail-card" *ngIf="user?.role === 'Citizen' && (grievance.status === 'Resolved' || grievance.status === 'Closed')">
         <mat-card-header>
-          <mat-icon mat-card-avatar>star</mat-icon>
-          <mat-card-title>Satisfaction & Feedback</mat-card-title>
+          <mat-card-title class="flex items-center gap-2">
+            <mat-icon>star</mat-icon> Satisfaction & Feedback
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div *ngIf="grievance.satisfactionRating">
@@ -211,15 +116,164 @@
         </mat-card-content>
       </mat-card>
 
-      <!-- AI Insights Component -->
-      <app-ai-card 
-        [category]="grievance.category" 
-        [priority]="grievance.priority" 
-        [summary]="grievance.summary">
-      </app-ai-card>
+    </div>
+
+    <!-- Sidebar Column (Only for Officer/Admin actions) -->
+    <div class="sidebar-column flex-col gap-3" *ngIf="user?.role === 'Officer' || user?.role === 'Admin'">
+      
+      <!-- Actions Card (Only for Officer/Admin) -->
+      <mat-card class="detail-card">
+        <mat-card-header>
+          <mat-card-title class="flex items-center gap-2">
+            <mat-icon>build</mat-icon> Actions
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="action-buttons">
+          
+          <!-- Universal Action Context (Remark, File, Visibility) -->
+          <div *ngIf="grievance.status !== 'Closed'" class="mb-4">
+            <h4 class="mb-2 font-medium">Provide Details</h4>
+            <mat-form-field appearance="outline" class="w-100 m-0 p-0">
+              <mat-label>Enter your remark or reasoning...</mat-label>
+              <textarea matInput [(ngModel)]="actionRemark" rows="3"></textarea>
+            </mat-form-field>
+            <mat-checkbox [(ngModel)]="actionIsInternal" color="primary" class="mb-2">
+              Internal (Visible only to Admin/Officer)
+            </mat-checkbox>
+            
+            <div class="mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Attach File (Optional)</label>
+              <input type="file" (change)="onActionFileSelected($event)" class="text-sm">
+            </div>
+            <mat-divider class="my-3"></mat-divider>
+          </div>
+
+          <!-- Action Buttons -->
+          <h4 class="mb-2 font-medium" *ngIf="grievance.status !== 'Closed'">Execute Action</h4>
+
+          <!-- Admin Assign Officer -->
+          <div *ngIf="user?.role === 'Admin' && grievance.status !== 'Closed'" class="mb-4">
+            <div class="flex gap-2">
+              <mat-form-field appearance="outline" class="flex-1 w-full m-0 p-0">
+                <mat-label>Select Officer</mat-label>
+                <mat-select [(ngModel)]="selectedOfficerId">
+                  <mat-option *ngFor="let officer of officers" [value]="officer.id">
+                    <div class="flex justify-between items-center w-full">
+                      <span>{{ officer.fullName }}</span>
+                      <span class="text-xs text-gray-500">Cases: {{ officer.assignedCases }}</span>
+                    </div>
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              <button mat-flat-button color="primary" class="h-[56px]"
+                      [disabled]="!selectedOfficerId || actionLoading || (!actionRemark && !actionFile)"
+                      (click)="assignOfficer()">
+                Assign
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="grievance.status !== 'Closed'" class="mb-4">
+            <button mat-stroked-button color="primary" class="w-100 mb-4" [disabled]="actionLoading || (!actionRemark && !actionFile)"
+                    (click)="addRemark()">
+              Add Note Only
+            </button>
+          </div>
+
+          <button mat-stroked-button color="primary" class="w-100 mb-2" [disabled]="actionLoading"
+                  *ngIf="grievance.status === 'Submitted' || grievance.status === 'Pending' || grievance.status === 'Assigned' || grievance.status === 'Reopened'"
+                  (click)="updateStatus('In Progress')">
+            Mark In Progress
+          </button>
+          
+          <button mat-flat-button color="accent" class="w-100 mb-2" [disabled]="actionLoading"
+                  *ngIf="grievance.status === 'In Progress'"
+                  (click)="updateStatus('Resolved')">
+            Mark Resolved
+          </button>
+          
+          <button mat-stroked-button color="warn" class="w-100" [disabled]="actionLoading"
+                  *ngIf="grievance.status !== 'Closed' && user?.role === 'Admin'"
+                  (click)="updateStatus('Closed')">
+            Close Grievance
+          </button>
+          <p class="hint-text mt-2" *ngIf="actionLoading">Processing action...</p>
+        </mat-card-content>
+      </mat-card>
 
     </div>
   </div>
+
+  <!-- Full-Width Bottom Section: Vertical Timeline & Action History Table -->
+  <mat-card class="detail-card w-full mt-6">
+    <mat-card-header>
+      <mat-card-title class="flex items-center gap-2">
+        <mat-icon>history</mat-icon> Timeline & History
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      
+      <!-- Visual Timeline -->
+      <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+         <app-vertical-timeline [histories]="grievance.statusHistories"></app-vertical-timeline>
+      </div>
+
+      <div class="table-container" *ngIf="grievance.statusHistories && grievance.statusHistories.length > 0; else noHistory">
+        <table class="action-table">
+          <thead>
+            <tr>
+              <th>Sr No</th>
+              <th>Action By</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Remarks</th>
+              <th>Attachments</th>
+              <th *ngIf="user?.role !== 'Citizen'">Internal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let history of grievance.statusHistories; let i = index" [class.internal-row]="history.isInternal">
+              <td>{{ i + 1 }}</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="avatar-circle">{{ history.changedByUserName?.charAt(0) || '?' }}</div>
+                  <span>{{ history.changedByUserName || 'System' }}</span>
+                </div>
+              </td>
+              <td>{{ history.changedAt | date:'medium' }}</td>
+              <td>
+                <span class="custom-chip" [ngClass]="getStatusColor(history.newStatus)">
+                  {{ history.newStatus }}
+                </span>
+              </td>
+              <td class="remarks-cell">
+                {{ history.remarks || '-' }}
+              </td>
+              <td>
+                <div *ngIf="history.attachmentUrl">
+                  <a [href]="history.attachmentUrl" target="_blank" class="text-blue-500 text-xs flex items-center gap-1 font-medium hover:underline">
+                    <mat-icon inline="true" style="font-size: 14px; width: 14px; height: 14px;">attach_file</mat-icon>
+                    {{ history.attachmentName || 'Attachment' }}
+                  </a>
+                </div>
+                <span *ngIf="!history.attachmentUrl" class="text-gray-400 text-xs">-</span>
+              </td>
+              <td *ngIf="user?.role !== 'Citizen'">
+                <button mat-icon-button (click)="toggleInternal(history.id, !history.isInternal)" class="small-icon-btn">
+                  <mat-icon *ngIf="history.isInternal" color="warn" matTooltip="Internal Remark (Click to make Public)" inline="true">visibility_off</mat-icon>
+                  <mat-icon *ngIf="!history.isInternal" color="primary" matTooltip="Public (Click to make Internal)" inline="true">visibility</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noHistory>
+        <p class="text-secondary">No action history available.</p>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
 </div>
 
 <div class="loading-state" *ngIf="loading">

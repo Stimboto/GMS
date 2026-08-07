@@ -21,11 +21,11 @@ export interface Grievance {
   priority: string;
   category: string;
   departmentId: number;
-  departmentName?: string;
+  department?: string;
   submittedByUserId?: number;
-  submittedByName?: string;
+  submittedBy?: string;
   assignedOfficerId?: number;
-  assignedOfficerName?: string;
+  assignedOfficer?: string;
   createdAt: string;
   updatedAt?: string;
   satisfactionRating?: number;
@@ -43,9 +43,12 @@ export interface Attachment {
 
 export interface StatusHistory {
   id: number;
-  status: string;
+  oldStatus: string;
+  newStatus: string;
   remarks: string;
-  imageUrl?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  isInternal?: boolean;
   changedAt: string;
   changedByUserId: number;
   changedByUserName?: string;

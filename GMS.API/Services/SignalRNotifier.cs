@@ -15,11 +15,11 @@ public class SignalRNotifier : IRealTimeNotifier
 
     public async Task NotifyUserAsync(int userId, string title, string message)
     {
-        await _hubContext.Clients.Group($"User_{userId}").SendAsync("ReceiveNotification", new { Title = title, Message = message });
+        await _hubContext.Clients.Group($"User_{userId}").SendAsync("ReceiveNotification", new { title = title, message = message });
     }
 
     public async Task NotifyRoleAsync(string role, string title, string message)
     {
-        await _hubContext.Clients.Group(role).SendAsync("ReceiveNotification", new { Title = title, Message = message });
+        await _hubContext.Clients.Group(role).SendAsync("ReceiveNotification", new { title = title, message = message });
     }
 }

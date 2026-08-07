@@ -18,6 +18,10 @@ public class GrievanceRepository : GenericRepository<Grievance>, IGrievanceRepos
             .Include(g => g.SubmittedByUser)
             .Include(g => g.AssignedOfficer)
             .Include(g => g.StatusHistories)
+                .ThenInclude(sh => sh.ChangedByUser)
+            .Include(g => g.StatusHistories)
+                .ThenInclude(sh => sh.Attachment)
+            .Include(g => g.Attachments)
             .FirstOrDefaultAsync(g => g.Id == id);
     }
 

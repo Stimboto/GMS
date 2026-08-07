@@ -17,12 +17,15 @@
 
 .notifications-card {
   padding: 0;
-  overflow: hidden;
 }
 
 .notification-item {
   transition: background-color 0.2s;
+  height: auto !important;
+  min-height: 72px;
 }
+
+
 
 .notification-item:hover {
   background-color: rgba(0, 0, 0, 0.02);
@@ -36,6 +39,7 @@
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 4px;
+  white-space: normal;
 }
 
 .unread .notification-message {
