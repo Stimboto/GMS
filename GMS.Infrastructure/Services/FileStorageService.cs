@@ -30,7 +30,7 @@ public class FileStorageService : IFileStorageService
         if (!IsValidMimeType(extension, contentType))
             throw new ArgumentException("Invalid file content type.");
 
-        var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "grievances");
+        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "grievances");
         
         if (!Directory.Exists(uploadsFolder))
         {
@@ -57,15 +57,15 @@ public class FileStorageService : IFileStorageService
     {
         if (string.IsNullOrEmpty(relativePath)) return;
 
-        var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
         
-        // Remove leading slash to correctly combine paths
-        var normalizedRelativePath = relativePath.TrimStart('/', '\\');
+        var relativeWithoutUploads = relativePath.StartsWith("/uploads/") ? relativePath.Substring(9) : relativePath;
+        var normalizedRelativePath = relativeWithoutUploads.TrimStart('/', '\\');
         
-        var fullPath = Path.GetFullPath(Path.Combine(webRoot, normalizedRelativePath));
+        var fullPath = Path.GetFullPath(Path.Combine(uploadsRoot, normalizedRelativePath));
         
         // Prevent path traversal on delete
-        if (!fullPath.StartsWith(Path.GetFullPath(webRoot)))
+        if (!fullPath.StartsWith(Path.GetFullPath(uploadsRoot)))
             throw new UnauthorizedAccessException("Invalid file path.");
 
         if (File.Exists(fullPath))

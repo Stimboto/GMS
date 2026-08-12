@@ -124,6 +124,18 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 // app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
 app.UseCors("AllowAngularApp");
 
 app.UseAuthentication();

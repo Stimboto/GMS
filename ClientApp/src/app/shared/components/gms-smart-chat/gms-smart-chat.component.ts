@@ -202,6 +202,9 @@ import { AuthService } from '../../../core/services/auth.service';
       color: #ffffff;
       border-bottom-right-radius: 2px;
     }
+    .user-bubble .msg-text {
+      color: #ffffff;
+    }
     .bot-bubble {
       background: #ffffff;
       color: #1e293b;

@@ -8,4 +8,5 @@ public interface IGrievanceRepository : IGenericRepository<Grievance>
     Task<IEnumerable<Grievance>> GetGrievancesByCitizenAsync(int citizenId);
     Task<IEnumerable<Grievance>> GetGrievancesByOfficerAsync(int officerId);
     Task<IEnumerable<Grievance>> GetAllGrievancesWithDetailsAsync();
+    Task<bool> ToggleHistoryInternalAsync(int historyId, bool isInternal);
 }

@@ -14,24 +14,24 @@
     </div>
   </div>
 
-  <!-- Top Grid Section -->
-  <div class="detail-grid mb-6">
+  <!-- Top Section (Full Width Description) -->
+  <mat-card class="detail-card mb-4">
+    <mat-card-header>
+      <mat-card-title class="flex items-center gap-2">
+        <mat-icon>description</mat-icon> Description
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="description-text">{{ grievance.description }}</p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Grid Section for Info, AI, and Sidebar -->
+  <div [class]="(user?.role === 'Officer' || user?.role === 'Admin') ? 'detail-grid mb-6' : 'detail-grid-full mb-6'">
     
     <!-- Main Column -->
     <div class="main-column flex-col gap-4">
       
-      <!-- Description Card -->
-      <mat-card class="detail-card">
-        <mat-card-header>
-          <mat-card-title class="flex items-center gap-2">
-            <mat-icon>description</mat-icon> Description
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="description-text">{{ grievance.description }}</p>
-        </mat-card-content>
-      </mat-card>
-
       <!-- Info & AI Cards Row -->
       <div class="info-ai-row">
         

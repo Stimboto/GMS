@@ -27,6 +27,12 @@
   gap: 24px;
 }
 
+.detail-grid-full {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
 .info-ai-row {
   display: flex;
   gap: 16px;

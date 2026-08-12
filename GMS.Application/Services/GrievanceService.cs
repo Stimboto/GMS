@@ -454,20 +454,7 @@ public class GrievanceService : IGrievanceService
 
     public async Task ToggleHistoryInternalAsync(int historyId, bool isInternal, int userId)
     {
-        var grievance = await _grievanceRepository.GetAllGrievancesWithDetailsAsync();
-        var targetHistory = grievance.SelectMany(g => g.StatusHistories).FirstOrDefault(h => h.Id == historyId);
-        
-        if (targetHistory == null) throw new KeyNotFoundException("History record not found.");
-
-        targetHistory.IsInternal = isInternal;
-        
-        // Find the parent grievance and update it
-        var parentGrievance = await _grievanceRepository.GetByIdAsync(targetHistory.GrievanceId);
-        if (parentGrievance != null)
-        {
-            // Just saving changes should suffice, since tracking might be on depending on the repo implementation
-            // The simplest is to just call Update on the parent since the child is modified
-            await _grievanceRepository.UpdateAsync(parentGrievance);
-        }
+        var success = await _grievanceRepository.ToggleHistoryInternalAsync(historyId, isInternal);
+        if (!success) throw new KeyNotFoundException("History record not found.");
     }
 }

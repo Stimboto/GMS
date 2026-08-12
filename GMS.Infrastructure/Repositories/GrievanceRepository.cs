@@ -56,4 +56,14 @@ public class GrievanceRepository : GenericRepository<Grievance>, IGrievanceRepos
             .OrderByDescending(g => g.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task<bool> ToggleHistoryInternalAsync(int historyId, bool isInternal)
+    {
+        var history = await _context.Set<StatusHistory>().FindAsync(historyId);
+        if (history == null) return false;
+        
+        history.IsInternal = isInternal;
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }
